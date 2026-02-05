@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
+      - MONGODB_DATABASE_NAME=${MONGODB_DATABASE_NAME:-WeddingPhotos}
+      - MONGODB_CLIENTS_COLLECTION=${MONGODB_CLIENTS_COLLECTION:-Clients}
+      - GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/app/secrets/google-credentials.json
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - REDIS_ENABLED=${REDIS_ENABLED:-false}
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING:-redis:6379}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - HANGFIRE_ENABLED=${HANGFIRE_ENABLED:-true}
+      - HANGFIRE_DASHBOARD_ENABLED=${HANGFIRE_DASHBOARD_ENABLED:-false}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    volumes:
+      - /home/SnapEvents/secrets:/app/secrets:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Optional: Redis
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    profiles:
+      - with-redis
+
+volumes:
+  redis-data:

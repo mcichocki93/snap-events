@@ -1,0 +1,76 @@
+### Test Contact Form - Valid Request
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Jan Kowalski",
+  "email": "jan.kowalski@example.com",
+  "phone": "+48123456789",
+  "subject": "Pytanie o ofertę",
+  "message": "Witam, interesuje mnie usługa fotograficzna na wesele w sierpniu 2025. Proszę o kontakt z ofertą cenową."
+}
+
+### Test Contact Form - Without Phone
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Anna Nowak",
+  "email": "anna.nowak@example.com",
+  "subject": "Zapytanie",
+  "message": "Szukam fotografa na ślub. Proszę o kontakt mailem."
+}
+
+### Test Contact Form - Validation Error (Empty Name)
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "test@example.com",
+  "message": "Test message"
+}
+
+### Test Contact Form - Validation Error (Invalid Email)
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "message": "This should fail due to invalid email format"
+}
+
+### Test Contact Form - Validation Error (Message Too Short)
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "message": "Short"
+}
+
+### Test Contact Form - Validation Error (Invalid Phone Format)
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "phone": "123",
+  "message": "This should fail due to invalid phone format"
+}
+
+### Check Contact Service Health
+GET http://localhost:5000/api/contact/health
+
+### Rate Limit Test (Run this 6 times to test 5/hour limit)
+POST http://localhost:5000/api/contact
+Content-Type: application/json
+
+{
+  "name": "Rate Limit Test",
+  "email": "ratelimit@example.com",
+  "message": "Testing rate limiting - this is the 6th request in an hour"
+}

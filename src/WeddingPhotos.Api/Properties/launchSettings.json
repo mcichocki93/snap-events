@@ -1,0 +1,24 @@
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MONGODB_CONNECTION_STRING": "mongodb+srv://mcichocki1993_db_user:A6iBWf0JlPLgXDJn@cluster0.bxh8pwn.mongodb.net/",
+        "MONGODB_DATABASE_NAME": "WeddingPhotos",
+        "MONGODB_CLIENTS_COLLECTION": "Clients",
+        "GOOGLE_SERVICE_ACCOUNT_KEY_PATH": "C:/Users/cichy/Documents/Programowanie/WeddingPhotos/secrets/google-credentials.json",
+        "GOOGLE_PROJECT_ID": "weddingphotos-441512",
+        "REDIS_ENABLED": "false",
+        "HANGFIRE_ENABLED": "true",
+        "HANGFIRE_DASHBOARD_ENABLED": "true",
+        "HANGFIRE_DASHBOARD_USERNAME": "admin",
+        "HANGFIRE_DASHBOARD_PASSWORD": "dev123",
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:3000"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5000"
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json"
+}

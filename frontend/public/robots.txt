@@ -1,0 +1,9 @@
+# Snap Events - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://snapevents.pl/sitemap.xml
+
+# Disallow admin/api paths (if any)
+Disallow: /api/

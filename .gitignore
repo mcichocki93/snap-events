@@ -1,0 +1,103 @@
+# .NET Core
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+.vscode/
+*.csproj.user
+*.csproj.nuget.dgspec.json
+*.csproj.nuget.g.props
+*.csproj.nuget.g.targets
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.development
+appsettings.Development.json
+appsettings.Production.json
+secrets/
+*.json.secret
+
+# Logs
+logs/
+*.log
+log/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# Hangfire
+App_Data/
+
+# Node modules (if any frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+_ReSharper*/
+
+# MonoDevelop
+test-results/
+
+# Backup files
+*.bak
+*.backup
+
+# Claude temp files
+tmpclaude-*

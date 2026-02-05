@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(dotnet build:*)",
+      "Bash(move InputValidator.cs \"c:\\\\Users\\\\cichy\\\\Documents\\\\Programowanie\\\\WeddingPhotos\\\\src\\\\WeddingPhotos.Domain\\\\Validation\\\\InputValidator.cs\")",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet remove:*)",
+      "Bash(dotnet test:*)",
+      "Bash(Select-Object -Last 50)",
+      "Bash(timeout 10 dotnet run:*)"
+    ]
+  }
+}
