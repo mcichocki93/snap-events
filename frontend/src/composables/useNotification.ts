@@ -27,7 +27,7 @@ export function useNotification() {
     notifications.value.push(notification)
 
     // Auto remove after timeout
-    if (notification.timeout > 0) {
+    if (notification.timeout !== undefined && notification.timeout > 0) {
       setTimeout(() => {
         removeNotification(id)
       }, notification.timeout)

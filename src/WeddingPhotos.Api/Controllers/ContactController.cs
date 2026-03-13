@@ -30,7 +30,7 @@ public class ContactController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("Invalid contact form submission from {Email}", request.Email);
+            _logger.LogWarning("Invalid contact form submission from {Email}", request?.Email ?? "(unknown)");
             return BadRequest(new
             {
                 error = "Nieprawidłowe dane formularza",
@@ -77,12 +77,10 @@ public class ContactController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult HealthCheck()
     {
-        var discordConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISCORD_WEBHOOK_URL"));
-
+        // Do not expose configuration details (information disclosure risk)
         return Ok(new
         {
             status = "healthy",
-            discordWebhook = discordConfigured ? "configured" : "not configured",
             timestamp = DateTime.UtcNow
         });
     }

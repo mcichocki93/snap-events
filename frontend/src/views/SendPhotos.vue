@@ -95,7 +95,7 @@ import UploadActions from '../components/upload/UploadActions.vue'
 
 const route = useRoute()
 const router = useRouter()
-const guid = route.params.guid
+const guid = Array.isArray(route.params.guid) ? route.params.guid[0] : route.params.guid
 
 // Composables
 const {
@@ -151,7 +151,7 @@ const uploadFiles = async () => {
   const result = await uploadFilesComposable()
 
   if (result.success) {
-    successMessage.value = `Pomyślnie przesłano ${result.count} zdjęć!`
+    successMessage.value = `Pomyślnie przesłano ${result.data?.count ?? 0} zdjęć!`
     showSuccessToast.value = true
     setTimeout(() => {
       showSuccessToast.value = false

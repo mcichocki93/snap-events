@@ -14,6 +14,7 @@ public class ClientRepository : IClientRepository
     private readonly ILogger<ClientRepository> _logger;
 
     public ClientRepository(
+        IMongoDatabase database,
         IOptions<MongoDbSettings> settings,
         ILogger<ClientRepository> logger)
     {
@@ -22,25 +23,16 @@ public class ClientRepository : IClientRepository
         try
         {
             var mongoSettings = settings.Value;
-
-            if (string.IsNullOrEmpty(mongoSettings.ConnectionString) || 
-                string.IsNullOrEmpty(mongoSettings.DatabaseName))
-            {
-                throw new InvalidOperationException(
-                    "MongoDB connection string or database name is not configured.");
-            }
-
-            var client = new MongoClient(mongoSettings.ConnectionString);
-            var database = client.GetDatabase(mongoSettings.DatabaseName);
-            _clientsCollection = database.GetCollection<Client>(mongoSettings.ClientsCollectionName);
+            var collectionName = mongoSettings.ClientsCollectionName ?? "Clients";
+            _clientsCollection = database.GetCollection<Client>(collectionName);
 
             CreateIndexes();
-            
+
             _logger.LogInformation("ClientRepository initialized successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialize MongoDB connection");
+            _logger.LogError(ex, "Failed to initialize ClientRepository");
             throw;
         }
     }
@@ -77,10 +69,8 @@ public class ClientRepository : IClientRepository
 
             guid = guid.Trim();
 
-            var filter = Builders<Client>.Filter.And(
-                Builders<Client>.Filter.Eq(x => x.Guid, guid),
-                Builders<Client>.Filter.Eq(x => x.IsActive, true)
-            );
+            // Filter by GUID only — business logic (IsActive, expiry) is handled by the service layer
+            var filter = Builders<Client>.Filter.Eq(x => x.Guid, guid);
 
             var client = await _clientsCollection.Find(filter).FirstOrDefaultAsync();
 
@@ -90,7 +80,7 @@ public class ClientRepository : IClientRepository
                 return null;
             }
 
-            if (client.DateTo < DateTime.Now)
+            if (client.DateTo < DateTime.UtcNow)
             {
                 _logger.LogInformation("Client access expired for guid: {Guid}", guid);
             }
@@ -118,7 +108,7 @@ public class ClientRepository : IClientRepository
                 client.Guid = GenerateUniqueGuid();
             }
 
-            client.CreatedAt = DateTime.Now;
+            client.CreatedAt = DateTime.UtcNow;
             client.IsActive = true;
             client.UploadedFilesCount = 0;
 
@@ -189,7 +179,7 @@ public class ClientRepository : IClientRepository
         try
         {
             var filter = Builders<Client>.Filter.And(
-                Builders<Client>.Filter.Lt(x => x.DateTo, DateTime.Now),
+                Builders<Client>.Filter.Lt(x => x.DateTo, DateTime.UtcNow),
                 Builders<Client>.Filter.Eq(x => x.IsActive, true)
             );
 
@@ -215,7 +205,7 @@ public class ClientRepository : IClientRepository
         if (string.IsNullOrWhiteSpace(client.Email) || !IsValidEmail(client.Email))
             errors.Add("Poprawny email jest wymagany");
 
-        if (client.DateTo <= DateTime.Now)
+        if (client.DateTo <= DateTime.UtcNow)
             errors.Add("Data ważności musi być w przyszłości");
 
         if (string.IsNullOrWhiteSpace(client.GoogleStorageUrl))

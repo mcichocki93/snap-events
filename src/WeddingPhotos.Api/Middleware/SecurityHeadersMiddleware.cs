@@ -33,13 +33,17 @@ public class SecurityHeadersMiddleware
         context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
 
         // Content-Security-Policy: Prevent XSS and injection attacks
+        // Note: 'unsafe-inline' is removed from script-src; 'unsafe-eval' is removed entirely.
+        // Vue 3 compiled templates do not require unsafe-eval at runtime.
         var csp = "default-src 'self'; " +
                   "img-src 'self' data: https: blob:; " +
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                  "script-src 'self'; " +
                   "style-src 'self' 'unsafe-inline'; " +
                   "font-src 'self' data: https://fonts.gstatic.com; " +
                   "connect-src 'self' https:; " +
-                  "frame-ancestors 'none';";
+                  "frame-ancestors 'none'; " +
+                  "base-uri 'self'; " +
+                  "form-action 'self';";
 
         context.Response.Headers.Append("Content-Security-Policy", csp);
 

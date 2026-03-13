@@ -63,7 +63,7 @@ public class GalleryService : IGalleryService
             }
 
             // Log if expired but allow viewing
-            if (client.DateTo < DateTime.Now)
+            if (client.DateTo < DateTime.UtcNow)
             {
                 _logger.LogInformation(
                     "Accessing expired gallery: {Guid}, expired on: {DateTo}",
@@ -100,6 +100,9 @@ public class GalleryService : IGalleryService
                 MimeType = p.MimeType
             }).ToList();
 
+            // TotalCount is the number of photos returned in this page (not the global total,
+            // which is not provided by Google Drive without a separate count query).
+            // HasMore is inferred from whether a full page was returned.
             var response = new GalleryResponse
             {
                 Photos = photoDtos,
@@ -159,7 +162,7 @@ public class GalleryService : IGalleryService
                 }, ApplicationConstants.ErrorMessages.GalleryDeactivated);
             }
 
-            if (client.DateTo < DateTime.Now)
+            if (client.DateTo < DateTime.UtcNow)
             {
                 return (false, new UploadPhotoResponse
                 {
@@ -212,6 +215,19 @@ public class GalleryService : IGalleryService
 
             // Sanitize filename
             var sanitizedFileName = InputValidator.SanitizeFileName(fileName);
+
+            // Check upload quota before uploading (MaxFiles == 0 means unlimited)
+            if (client.MaxFiles > 0 && client.UploadedFilesCount >= client.MaxFiles)
+            {
+                _logger.LogWarning(
+                    "Upload rejected - quota exceeded for GUID={Guid}: {Count}/{Max}",
+                    guid, client.UploadedFilesCount, client.MaxFiles);
+                return (false, new UploadPhotoResponse
+                {
+                    Success = false,
+                    Message = "Osiągnięto limit zdjęć dla tej galerii"
+                }, "Osiągnięto limit zdjęć dla tej galerii");
+            }
 
             _logger.LogInformation(
                 "Upload started: GUID={Guid}, File={FileName}, Size={Size}MB",

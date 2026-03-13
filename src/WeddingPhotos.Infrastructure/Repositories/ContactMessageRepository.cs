@@ -13,6 +13,7 @@ public class ContactMessageRepository : IContactMessageRepository
     private readonly ILogger<ContactMessageRepository> _logger;
 
     public ContactMessageRepository(
+        IMongoDatabase database,
         IOptions<MongoDbSettings> settings,
         ILogger<ContactMessageRepository> logger)
     {
@@ -21,18 +22,8 @@ public class ContactMessageRepository : IContactMessageRepository
         try
         {
             var mongoSettings = settings.Value;
-
-            if (string.IsNullOrEmpty(mongoSettings.ConnectionString) ||
-                string.IsNullOrEmpty(mongoSettings.DatabaseName))
-            {
-                throw new InvalidOperationException(
-                    "MongoDB connection string or database name is not configured.");
-            }
-
-            var client = new MongoClient(mongoSettings.ConnectionString);
-            var database = client.GetDatabase(mongoSettings.DatabaseName);
-            _contactMessagesCollection = database.GetCollection<ContactMessage>(
-                mongoSettings.ContactMessagesCollectionName ?? "ContactMessages");
+            var collectionName = mongoSettings.ContactMessagesCollectionName ?? "ContactMessages";
+            _contactMessagesCollection = database.GetCollection<ContactMessage>(collectionName);
 
             CreateIndexes();
 

@@ -97,7 +97,7 @@ public class GoogleStorageService : IGoogleStorageService
             {
                 Name = secureFileName,
                 Parents = new List<string> { folderId },
-                Description = $"Uploaded on {DateTime.Now:yyyy-MM-dd HH:mm:ss}"
+                Description = $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC"
             };
 
             var mimeType = GetMimeType(secureFileName);
@@ -153,27 +153,41 @@ public class GoogleStorageService : IGoogleStorageService
             var folderId = ExtractFolderIdFromUrl(folderUrl);
             var photos = new List<PhotoInfo>();
 
+            // Google Drive API max page size is 1000
+            const int driveApiMaxPageSize = 1000;
+            var clampedPageSize = Math.Min(pageSize, driveApiMaxPageSize);
+
             var request = _driveService.Files.List();
             request.Q = $"'{folderId}' in parents and mimeType contains 'image/' and trashed=false";
             request.Fields = "nextPageToken,files(id,name,size,createdTime,mimeType,thumbnailLink,webViewLink,webContentLink)";
             request.OrderBy = "createdTime desc";
-            request.PageSize = pageSize;
+            request.PageSize = clampedPageSize;
 
-            if (page > 1)
+            // For pages beyond page 1, advance through page tokens sequentially.
+            // This is the only correct way to paginate Drive API results.
+            string? pageToken = null;
+            for (int currentPage = 1; currentPage < page; currentPage++)
             {
-                var totalToSkip = (page - 1) * pageSize;
-                request.PageSize = totalToSkip + pageSize;
+                request.PageToken = pageToken;
+                var skipResult = await request.ExecuteAsync();
+                pageToken = skipResult.NextPageToken;
+
+                if (string.IsNullOrEmpty(pageToken))
+                {
+                    // No more pages exist — requested page is out of range
+                    _logger.LogInformation(
+                        "Requested page {Page} exceeds available pages for folder {FolderId}",
+                        page, folderId);
+                    return photos;
+                }
             }
 
+            request.PageToken = pageToken;
             var result = await request.ExecuteAsync();
 
             if (result.Files != null)
             {
-                var filesToProcess = page > 1
-                    ? result.Files.Skip((page - 1) * pageSize).Take(pageSize)
-                    : result.Files;
-
-                foreach (var file in filesToProcess)
+                foreach (var file in result.Files)
                 {
                     var photo = new PhotoInfo
                     {
@@ -181,7 +195,7 @@ public class GoogleStorageService : IGoogleStorageService
                         Name = file.Name,
                         ThumbnailUrl = GetOptimizedThumbnailUrl(file.Id, file.ThumbnailLink),
                         FullUrl = GetOptimizedImageUrl(file.Id),
-                        DateAdded = file.CreatedTime ?? DateTime.Now,
+                        DateAdded = file.CreatedTime ?? DateTime.UtcNow,
                         Size = file.Size ?? 0,
                         MimeType = file.MimeType ?? "image/jpeg"
                     };
@@ -291,7 +305,7 @@ public class GoogleStorageService : IGoogleStorageService
 
     private static string GenerateSecureFileName(string extension)
     {
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var randomSuffix = GenerateRandomString(8);
         return $"photo_{timestamp}_{randomSuffix}{extension}".ToLower();
     }

@@ -45,6 +45,18 @@ public static class InputValidator
     // Allowed image extensions - using constants from ApplicationConstants
     private static readonly HashSet<string> AllowedImageExtensions = ApplicationConstants.AllowedFileExtensions.Images;
 
+    // Hex color validation regex - compiled and cached as static field
+    private static readonly Regex HexColorRegex = new Regex(
+        @"^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
+        RegexOptions.Compiled
+    );
+
+    // Font name validation regex - compiled and cached as static field
+    private static readonly Regex FontNameRegex = new Regex(
+        @"^[a-zA-Z0-9\s\-]+$",
+        RegexOptions.Compiled
+    );
+
     /// <summary>
     /// Validates GUID format
     /// </summary>
@@ -161,8 +173,7 @@ public static class InputValidator
             return false;
 
         // Matches #RGB, #RRGGBB, #RRGGBBAA
-        var hexColorRegex = new Regex(@"^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$");
-        return hexColorRegex.IsMatch(color);
+        return HexColorRegex.IsMatch(color);
     }
 
     /// <summary>
@@ -173,7 +184,6 @@ public static class InputValidator
         if (string.IsNullOrWhiteSpace(fontName))
             return false;
 
-        var fontNameRegex = new Regex(@"^[a-zA-Z0-9\s\-]+$");
-        return fontNameRegex.IsMatch(fontName);
+        return FontNameRegex.IsMatch(fontName);
     }
 }

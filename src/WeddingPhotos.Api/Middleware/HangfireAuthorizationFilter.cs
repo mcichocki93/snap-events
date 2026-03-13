@@ -1,4 +1,5 @@
 using Hangfire.Dashboard;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace WeddingPhotos.Api.Middleware;
@@ -21,13 +22,14 @@ public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
         // If credentials not configured, deny access (secure by default)
         if (string.IsNullOrEmpty(_username) || string.IsNullOrEmpty(_password))
         {
+            SetChallengeResponse(httpContext);
             return false;
         }
 
         // Get Authorization header
         string authHeader = httpContext.Request.Headers["Authorization"].ToString();
 
-        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic "))
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
         {
             // Send 401 Unauthorized with WWW-Authenticate header
             SetChallengeResponse(httpContext);
@@ -39,19 +41,27 @@ public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
             // Decode Basic Auth credentials
             var encodedCredentials = authHeader.Substring("Basic ".Length).Trim();
             var decodedCredentials = Encoding.UTF8.GetString(Convert.FromBase64String(encodedCredentials));
-            var credentials = decodedCredentials.Split(':', 2);
+            var colonIndex = decodedCredentials.IndexOf(':');
 
-            if (credentials.Length != 2)
+            if (colonIndex < 0)
             {
                 SetChallengeResponse(httpContext);
                 return false;
             }
 
-            var username = credentials[0];
-            var password = credentials[1];
+            var username = decodedCredentials[..colonIndex];
+            var password = decodedCredentials[(colonIndex + 1)..];
 
-            // Verify credentials
-            if (username == _username && password == _password)
+            // Timing-safe comparison to prevent timing attacks
+            var usernameMatch = CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(username),
+                Encoding.UTF8.GetBytes(_username));
+
+            var passwordMatch = CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(password),
+                Encoding.UTF8.GetBytes(_password));
+
+            if (usernameMatch && passwordMatch)
             {
                 return true;
             }

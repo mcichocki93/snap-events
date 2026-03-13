@@ -115,7 +115,7 @@ import PhotoLightbox from '../components/gallery/PhotoLightbox.vue'
 
 const route = useRoute()
 const router = useRouter()
-const guid = route.params.guid
+const guid = Array.isArray(route.params.guid) ? route.params.guid[0] : route.params.guid
 
 // Composables
 const {

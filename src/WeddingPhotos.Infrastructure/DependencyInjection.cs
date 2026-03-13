@@ -15,12 +15,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Configure settings
+        // Configure settings — section names must match appsettings.json keys
         services.Configure<MongoDbSettings>(
-            configuration.GetSection("MongoDb"));
+            configuration.GetSection("MongoDbSettings"));
 
         services.Configure<GoogleCloudSettings>(
-            configuration.GetSection("GoogleCloudSettings"));
+            configuration.GetSection("GoogleCloud"));
 
         // Configure Redis with environment variable overrides
         var redisEnabled = bool.TryParse(

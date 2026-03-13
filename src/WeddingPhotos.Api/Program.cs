@@ -249,6 +249,12 @@ try
         Log.Information("Hangfire background jobs enabled");
     }
 
+    // Register named HttpClient for photo proxy with sensible timeout (avoids per-request HttpClient creation)
+    builder.Services.AddHttpClient("PhotoProxy", client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
+
     builder.Services.AddControllers(options =>
     {
         options.MaxModelBindingCollectionSize = 1024;
@@ -289,10 +295,10 @@ try
 
     app.UseMiddleware<SecurityHeadersMiddleware>();
 
-    //if (app.Environment.IsProduction())
-    //{
-    //    app.UseHttpsRedirection();
-    //}
+    if (app.Environment.IsProduction())
+    {
+        app.UseHttpsRedirection();
+    }
 
     if (app.Environment.IsDevelopment())
     {
@@ -359,11 +365,15 @@ try
     });
 
     // Detailed endpoint with full diagnostics (for monitoring/debugging)
-    app.MapHealthChecks("/health/detailed", new HealthCheckOptions
+    // Restricted to non-Production environments to avoid leaking infrastructure info
+    if (!app.Environment.IsProduction())
     {
-        Predicate = _ => true,
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    });
+        app.MapHealthChecks("/health/detailed", new HealthCheckOptions
+        {
+            Predicate = _ => true,
+            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        });
+    }
 
     // Ready endpoint - checks if app is ready to serve traffic
     app.MapHealthChecks("/health/ready", new HealthCheckOptions

@@ -50,11 +50,17 @@ export default {
   },
 
   /**
-   * Validate client access
+   * Validate client access — uses the standard getClient endpoint
+   * Returns a normalised validation result shape
    */
   async validateClient(guid: string): Promise<{ isValid: boolean; message: string; brideGroom?: string }> {
-    const response = await apiClient.get(`/client/${guid}/validate`)
-    return response.data
+    const response = await apiClient.get(`/client/${guid}`)
+    const client = response.data
+    return {
+      isValid: client.isActive && !client.isExpired,
+      message: client.isActive ? (client.isExpired ? 'Galeria wygasła' : 'OK') : 'Galeria dezaktywowana',
+      brideGroom: client.eventName
+    }
   },
 
   /**
@@ -89,11 +95,10 @@ export default {
   },
 
   /**
-   * Get download URL for a photo
+   * Get the proxied download URL for a photo (avoids tracking prevention)
    */
-  async getDownloadUrl(photoId: string): Promise<{ downloadUrl: string }> {
-    const response = await apiClient.get<{ downloadUrl: string }>(`/photo/download/${photoId}`)
-    return response.data
+  getDownloadUrl(photoId: string): string {
+    return `${API_BASE_URL}/photo/proxy/${photoId}/download`
   },
 
   /**

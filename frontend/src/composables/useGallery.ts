@@ -33,8 +33,8 @@ export function useGallery(guid: string): UseGalleryReturn {
    */
   const mapPhotoWithProxyUrls = (photo: PhotoInfo): PhotoInfo => ({
     ...photo,
-    thumbnailUrl: api.getProxyThumbnailUrl(photo.id || (photo as any).Id),
-    fullUrl: api.getProxyFullUrl(photo.id || (photo as any).Id)
+    thumbnailUrl: api.getProxyThumbnailUrl(photo.id),
+    fullUrl: api.getProxyFullUrl(photo.id)
   })
 
   /**
@@ -87,14 +87,10 @@ export function useGallery(guid: string): UseGalleryReturn {
 
     currentPage.value++
 
-    try {
-      await loadPhotos(false)
-    } catch (err) {
-      currentPage.value-- // Revert on error
-      notify({
-        type: 'negative',
-        message: 'Nie udało się załadować więcej zdjęć'
-      })
+    const result = await loadPhotos(false)
+
+    if (!result.success) {
+      currentPage.value-- // Revert page counter on failure
     }
   }
 

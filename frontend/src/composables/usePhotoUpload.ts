@@ -39,6 +39,17 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
   }
 
+  // Allowed image MIME types (must match backend AllowedMimeTypes)
+  const ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/heic',
+    'image/heif'
+  ])
+
   /**
    * Validate file before adding to selection
    */
@@ -52,8 +63,8 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       errors.push(`Plik ${file.name} jest za duży (max ${maxSizeMB}MB)`)
     }
 
-    if (!file.type.startsWith('image/')) {
-      errors.push(`Plik ${file.name} nie jest zdjęciem`)
+    if (!ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) {
+      errors.push(`Plik ${file.name} nie jest obsługiwanym typem zdjęcia (dozwolone: JPG, PNG, GIF, WEBP, HEIC)`)
     }
 
     return errors
@@ -94,14 +105,16 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
     selectedFiles.value.push(...validFiles)
 
-    // Check if too many files selected (maxFiles === 0 means unlimited)
+    // Check if too many files selected, accounting for already uploaded files
     const maxFiles = clientRef.value.maxFiles
-    if (maxFiles > 0 && selectedFiles.value.length > maxFiles) {
+    const alreadyUploaded = clientRef.value.uploadedFilesCount
+    const remaining = maxFiles > 0 ? maxFiles - alreadyUploaded : Infinity
+    if (maxFiles > 0 && selectedFiles.value.length > remaining) {
       notify({
         type: 'warning',
-        message: `Możesz przesłać maksymalnie ${maxFiles} zdjęć na raz`
+        message: `Możesz przesłać jeszcze maksymalnie ${remaining} zdjęć`
       })
-      selectedFiles.value = selectedFiles.value.slice(0, maxFiles)
+      selectedFiles.value = selectedFiles.value.slice(0, remaining)
     }
   }
 
@@ -202,10 +215,11 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   // Computed
   const hasFiles = computed(() => selectedFiles.value.length > 0)
   const canUpload = computed(() => {
-    return hasFiles.value &&
-           clientRef.value !== null &&
-           (clientRef.value.maxFiles === 0 || selectedFiles.value.length <= clientRef.value.maxFiles) &&
-           !uploading.value
+    if (!hasFiles.value || clientRef.value === null || uploading.value) return false
+    const { maxFiles, uploadedFilesCount } = clientRef.value
+    if (maxFiles === 0) return true // unlimited
+    const remaining = maxFiles - uploadedFilesCount
+    return remaining > 0 && selectedFiles.value.length <= remaining
   })
 
   return {

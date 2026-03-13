@@ -73,12 +73,7 @@ export const useClientStore = defineStore('client', {
     },
 
     async validateClient(guid: string): Promise<{ isValid: boolean; message: string; brideGroom?: string }> {
-      try {
-        const result = await api.validateClient(guid)
-        return result
-      } catch (error) {
-        throw error
-      }
+      return api.validateClient(guid)
     },
 
     updateUploadCount(): void {

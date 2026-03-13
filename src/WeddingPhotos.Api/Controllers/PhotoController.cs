@@ -13,13 +13,16 @@ public class PhotoController : ControllerBase
 {
     private readonly IGalleryService _galleryService;
     private readonly ILogger<PhotoController> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public PhotoController(
         IGalleryService galleryService,
-        ILogger<PhotoController> logger)
+        ILogger<PhotoController> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _galleryService = galleryService;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet("gallery/{guid}")]
@@ -184,8 +187,7 @@ public class PhotoController : ControllerBase
                 return NotFound(new { message = errorMessage });
             }
 
-            using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            var httpClient = _httpClientFactory.CreateClient("PhotoProxy");
 
             var response = await httpClient.GetAsync(downloadUrl);
 
@@ -233,7 +235,7 @@ public class PhotoController : ControllerBase
                 return NotFound(new { message = errorMessage });
             }
 
-            using var httpClient = new HttpClient();
+            var httpClient = _httpClientFactory.CreateClient("PhotoProxy");
             var response = await httpClient.GetAsync(downloadUrl);
 
             if (!response.IsSuccessStatusCode)
