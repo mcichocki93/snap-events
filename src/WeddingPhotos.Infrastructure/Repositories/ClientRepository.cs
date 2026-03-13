@@ -129,6 +129,58 @@ public class ClientRepository : IClientRepository
         }
     }
 
+    public async Task<List<Client>> GetAllAsync()
+    {
+        try
+        {
+            return await _clientsCollection
+                .Find(Builders<Client>.Filter.Empty)
+                .SortByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all clients");
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateAsync(string guid, Client client)
+    {
+        try
+        {
+            var filter = Builders<Client>.Filter.Eq(x => x.Guid, guid);
+            client.UpdatedAt = DateTime.UtcNow;
+            var result = await _clientsCollection.ReplaceOneAsync(filter, client);
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating client with guid: {Guid}", guid);
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(string guid)
+    {
+        try
+        {
+            var filter = Builders<Client>.Filter.Eq(x => x.Guid, guid);
+            var result = await _clientsCollection.DeleteOneAsync(filter);
+            if (result.DeletedCount > 0)
+            {
+                _logger.LogInformation("Deleted client with guid: {Guid}", guid);
+                return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting client with guid: {Guid}", guid);
+            throw;
+        }
+    }
+
     public async Task UpdateUploadedFilesCountAsync(string guid, int additionalFiles)
     {
         try

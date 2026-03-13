@@ -4,15 +4,18 @@ using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Sentry;
 using Sentry.AspNetCore;
 using Serilog;
 using Serilog.Events;
+using System.Text;
 using WeddingPhotos.Api.Middleware;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Infrastructure;
@@ -249,6 +252,29 @@ try
         Log.Information("Hangfire background jobs enabled");
     }
 
+    // ============================================
+    // JWT AUTHENTICATION
+    // ============================================
+
+    var jwtSecret = Environment.GetEnvironmentVariable("ADMIN_JWT_SECRET")
+        ?? builder.Configuration["Admin:JwtSecret"]
+        ?? throw new InvalidOperationException("Admin JWT secret is not configured.");
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+    builder.Services.AddAuthorization();
+
     // Register named HttpClient for photo proxy with sensible timeout (avoids per-request HttpClient creation)
     builder.Services.AddHttpClient("PhotoProxy", client =>
     {
@@ -345,6 +371,7 @@ try
         Log.Information("Hangfire Dashboard enabled at {Path}", dashboardPath);
     }
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     // Health Check Endpoints

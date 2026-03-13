@@ -83,6 +83,19 @@ public class CreateClientRequest
     public string GoogleStorageUrl { get; set; } = string.Empty;
 }
 
+public class AdminLoginRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class AdminClientResponse : ClientResponse
+{
+    public string? GoogleStorageUrl { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
 public class UpdateClientRequest
 {
     // PERSONAL DATA
