@@ -28,7 +28,7 @@
 
         <!-- Actions -->
         <div class="lightbox-actions">
-          <button class="download-btn" @click="handleDownload">
+          <button class="download-btn" :style="{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)` }" @click="handleDownload">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 2v12M4 10l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M2 16v1a1 1 0 001 1h14a1 1 0 001-1v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -73,11 +73,13 @@ interface Props {
   photo: PhotoInfo | null
   hasPrevious?: boolean
   hasNext?: boolean
+  accentColor?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   hasPrevious: false,
-  hasNext: false
+  hasNext: false,
+  accentColor: '#3b82f6'
 })
 
 const emit = defineEmits<{
@@ -256,7 +258,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #C9A88F 0%, #D4AF37 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -268,7 +269,7 @@ onUnmounted(() => {
 
 .download-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(201, 168, 143, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 /* Navigation arrows */

@@ -51,8 +51,8 @@ public class CreateClientRequestValidator : AbstractValidator<CreateClientReques
 
         // Limits
         RuleFor(x => x.MaxFiles)
-            .GreaterThan(0).WithMessage("Maksymalna liczba plików musi być większa niż 0")
-            .LessThanOrEqualTo(10000).WithMessage("Maksymalna liczba plików nie może przekraczać 10000");
+            .GreaterThanOrEqualTo(0).WithMessage("Maksymalna liczba plików nie może być ujemna")
+            .LessThanOrEqualTo(10000).WithMessage("Maksymalna liczba plików nie może przekraczać 10000 (użyj 0 dla braku limitu)");
 
         RuleFor(x => x.MaxFileSize)
             .GreaterThan(0).WithMessage("Maksymalny rozmiar pliku musi być większy niż 0")

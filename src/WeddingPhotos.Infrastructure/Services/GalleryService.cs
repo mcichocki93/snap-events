@@ -238,6 +238,12 @@ public class GalleryService : IGalleryService
                 }, ApplicationConstants.ErrorMessages.UploadError);
             }
 
+            // Increment uploaded files counter (only if limit is enabled)
+            if (client.MaxFiles > 0)
+            {
+                await _clientRepository.UpdateUploadedFilesCountAsync(guid, 1);
+            }
+
             // Invalidate gallery cache for this client (all pages)
             await _cacheService.RemoveByPrefixAsync($"gallery:{guid}:");
 

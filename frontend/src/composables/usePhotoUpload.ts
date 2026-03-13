@@ -94,9 +94,9 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
     selectedFiles.value.push(...validFiles)
 
-    // Check if too many files selected
+    // Check if too many files selected (maxFiles === 0 means unlimited)
     const maxFiles = clientRef.value.maxFiles
-    if (selectedFiles.value.length > maxFiles) {
+    if (maxFiles > 0 && selectedFiles.value.length > maxFiles) {
       notify({
         type: 'warning',
         message: `Możesz przesłać maksymalnie ${maxFiles} zdjęć na raz`
@@ -124,7 +124,7 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       return { success: false, message: 'Brak danych klienta' }
     }
 
-    if (selectedFiles.value.length > clientRef.value.maxFiles) {
+    if (clientRef.value.maxFiles > 0 && selectedFiles.value.length > clientRef.value.maxFiles) {
       return { success: false, message: 'Za dużo plików' }
     }
 
@@ -204,7 +204,7 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   const canUpload = computed(() => {
     return hasFiles.value &&
            clientRef.value !== null &&
-           selectedFiles.value.length <= clientRef.value.maxFiles &&
+           (clientRef.value.maxFiles === 0 || selectedFiles.value.length <= clientRef.value.maxFiles) &&
            !uploading.value
   })
 

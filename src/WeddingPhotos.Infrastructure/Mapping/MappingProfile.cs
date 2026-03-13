@@ -32,7 +32,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.IsExpired, opt => opt.MapFrom(src => src.DateTo < DateTime.UtcNow))
             .ForMember(dest => dest.MaxFiles, opt => opt.MapFrom(src => src.MaxFiles))
             .ForMember(dest => dest.UploadedFilesCount, opt => opt.MapFrom(src => src.UploadedFilesCount))
-            .ForMember(dest => dest.CanUploadMore, opt => opt.MapFrom(src => src.UploadedFilesCount < src.MaxFiles))
+            .ForMember(dest => dest.CanUploadMore, opt => opt.MapFrom(src => src.MaxFiles == 0 || src.UploadedFilesCount < src.MaxFiles))
             .ForMember(dest => dest.MaxFileSize, opt => opt.MapFrom(src => src.MaxFileSize))
             .ForMember(dest => dest.BackgroundColor, opt => opt.MapFrom(src => src.BackgroundColor))
             .ForMember(dest => dest.BackgroundColorSecondary, opt => opt.MapFrom(src => src.BackgroundColorSecondary))

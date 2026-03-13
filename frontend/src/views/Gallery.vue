@@ -92,6 +92,7 @@
       :photo="selectedPhoto"
       :has-previous="selectedPhotoIndex > 0"
       :has-next="selectedPhotoIndex < photos.length - 1"
+      :accent-color="themeColors.accent"
       @download="handleDownloadPhoto"
       @previous="goToPreviousPhoto"
       @next="goToNextPhoto"

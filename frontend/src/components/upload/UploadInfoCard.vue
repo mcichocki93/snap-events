@@ -8,10 +8,10 @@
         Informacje o przesyłaniu
       </h3>
       <div class="info-item" :style="{ color: themeColors.font }">
-        Limit zdjęć na jeden upload: <strong>{{ maxFiles }}</strong>
+        Limit zdjęć na jeden upload: <strong>{{ maxFiles === 0 ? 'bez limitu' : maxFiles }}</strong>
       </div>
       <div v-if="selectedCount > 0" class="info-item" :style="{ color: themeColors.font }">
-        Wybrano: <strong>{{ selectedCount }} / {{ maxFiles }}</strong>
+        Wybrano: <strong>{{ maxFiles === 0 ? selectedCount : `${selectedCount} / ${maxFiles}` }}</strong>
       </div>
       <div class="info-item" :style="{ color: themeColors.font }">
         Maksymalny rozmiar pliku: <strong>{{ maxFileSizeMB }} MB</strong>
