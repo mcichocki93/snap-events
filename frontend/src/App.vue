@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <NotificationContainer />
-    <header class="app-header" :class="{ 'scrolled': isScrolled }">
+    <header v-if="!isAdminRoute" class="app-header" :class="{ 'scrolled': isScrolled }">
       <div class="header-content">
         <router-link to="/" class="logo-link">
           <SnapEventsLogo :show-text="true" :show-tagline="false" />
@@ -24,20 +24,22 @@
       </div>
     </header>
 
-    <main class="app-main">
+    <main :class="isAdminRoute ? '' : 'app-main'">
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import SnapEventsLogo from './components/SnapEventsLogo.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 
 const router = useRouter()
+const route = useRoute()
 const isScrolled = ref(false)
+const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 const mobileMenuOpen = ref(false)
 
 const handleScroll = () => {

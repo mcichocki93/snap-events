@@ -140,7 +140,6 @@
     <section class="final-cta">
       <div class="container">
         <div class="cta-content" data-aos="zoom-in">
-          <SnapEventsLogo variant="light" :show-tagline="false" class="cta-logo" />
           <h2 class="cta-title">Gotowy na swoją uroczystość?</h2>
           <p class="cta-text">
             Skontaktuj się z nami i zabezpiecz swoją datę
@@ -763,19 +762,10 @@ onMounted(() => {
 }
 
 .pricing-card.featured {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-}
-
-.pricing-card.featured::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  border-radius: 24px 24px 0 0;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 8px 32px rgba(201, 168, 143, 0.25);
 }
 
 .card-badge {

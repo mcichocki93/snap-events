@@ -51,6 +51,7 @@ appsettings.Development.json
 appsettings.Production.json
 secrets/
 *.json.secret
+**/Properties/launchSettings.json
 
 # Logs
 logs/

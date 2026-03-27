@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Production override - uses pre-built images from ghcr.io
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: ${API_IMAGE:-ghcr.io/GITHUB_USERNAME/snapevents-api:latest}
+    expose:
+      - "5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
+      - MONGODB_DATABASE_NAME=${MONGODB_DATABASE_NAME:-WeddingPhotos}
+      - MONGODB_CLIENTS_COLLECTION=${MONGODB_CLIENTS_COLLECTION:-Clients}
+      - GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/app/secrets/google-credentials.json
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - REDIS_ENABLED=${REDIS_ENABLED:-false}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=production
+      - HANGFIRE_ENABLED=${HANGFIRE_ENABLED:-true}
+      - HANGFIRE_DASHBOARD_ENABLED=${HANGFIRE_DASHBOARD_ENABLED:-false}
+      - HANGFIRE_DASHBOARD_USERNAME=${HANGFIRE_DASHBOARD_USERNAME}
+      - HANGFIRE_DASHBOARD_PASSWORD=${HANGFIRE_DASHBOARD_PASSWORD}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET}
+    volumes:
+      - /home/SnapEvents/secrets:/app/secrets:ro
+      - /home/SnapEvents/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/GITHUB_USERNAME/snapevents-frontend:latest}
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes: {}
