@@ -103,3 +103,6 @@ test-results/
 # Claude temp files
 tmpclaude-*
 .claude/
+
+# Private documentation (contains credentials)
+DOCUMENTATION.md
