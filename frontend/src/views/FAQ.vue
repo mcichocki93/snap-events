@@ -61,7 +61,7 @@
         <div class="faq-cta" data-aos="fade-up">
           <h3>Nie znalazłeś odpowiedzi?</h3>
           <p>Skontaktuj się z nami, chętnie pomożemy!</p>
-          <a href="mailto:kontakt@snapevents.pl" class="contact-button">
+          <a href="mailto:kontakt@snapevents.com.pl" class="contact-button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M2 4h16c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
               <path d="M20 6L10 13 0 6" stroke="currentColor" stroke-width="2"/>
@@ -127,7 +127,7 @@ const faqItems = [
   {
     category: 'pricing',
     question: 'Czy mogę przedłużyć dostępność galerii?',
-    answer: 'Tak! Przed upływem czasu dostępności możesz przedłużyć galerię kontaktując się z nami na <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a>. Prześlemy Ci ofertę przedłużenia.'
+    answer: 'Tak! Przed upływem czasu dostępności możesz przedłużyć galerię kontaktując się z nami na <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a>. Prześlemy Ci ofertę przedłużenia.'
   },
   {
     category: 'pricing',
@@ -197,7 +197,7 @@ const faqItems = [
   {
     category: 'technical',
     question: 'Co zrobić jeśli zapomniałem linku do galerii?',
-    answer: 'Link do galerii został wysłany na Twój adres email przy zakupie. Sprawdź skrzynkę odbiorczą i folder spam. Jeśli nie możesz znaleźć emaila, skontaktuj się z nami: <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a>'
+    answer: 'Link do galerii został wysłany na Twój adres email przy zakupie. Sprawdź skrzynkę odbiorczą i folder spam. Jeśli nie możesz znaleźć emaila, skontaktuj się z nami: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a>'
   },
   {
     category: 'pricing',

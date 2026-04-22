@@ -52,7 +52,7 @@
                 v-model="form.phone"
                 type="tel"
                 class="form-input"
-                placeholder="+48 123 456 789"
+                placeholder="+48 510 945 741"
               />
             </div>
 
@@ -114,13 +114,13 @@
           <div class="info-card">
             <div class="info-icon">📧</div>
             <h3 class="info-title">Email</h3>
-            <p class="info-text">kontakt@snapevents.pl</p>
+            <p class="info-text">kontakt@snapevents.com.pl</p>
           </div>
 
           <div class="info-card">
             <div class="info-icon">📱</div>
             <h3 class="info-title">Telefon</h3>
-            <p class="info-text">+48 123 456 789</p>
+            <p class="info-text">+48 510 945 741</p>
           </div>
 
           <div class="info-card">

@@ -19,7 +19,7 @@
           <p><strong>Administratorem danych osobowych jest:</strong></p>
           <p>
             Snap Events<br>
-            Email: <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a><br>
+            Email: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             Strona: <a href="https://snapevents.pl">www.snapevents.pl</a>
           </p>
           <p>Administrator jest odpowiedzialny za bezpieczeństwo danych osobowych i przestrzeganie przepisów o ochronie danych, w szczególności Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 (RODO).</p>
@@ -105,7 +105,7 @@
             <li><strong>Prawo do wniesienia skargi</strong> - możesz złożyć skargę do organu nadzorczego (UODO)</li>
           </ul>
 
-          <p>Aby skorzystać z swoich praw, skontaktuj się z nami: <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a></p>
+          <p>Aby skorzystać z swoich praw, skontaktuj się z nami: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a></p>
         </section>
 
         <section class="privacy-section" data-aos="fade-up">
@@ -184,7 +184,7 @@
           <h2>15. Kontakt w sprawie danych osobowych</h2>
           <p>W razie pytań dotyczących przetwarzania danych osobowych lub chęci skorzystania ze swoich praw, prosimy o kontakt:</p>
           <p>
-            <strong>Email:</strong> <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a><br>
+            <strong>Email:</strong> <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             <strong>Temat wiadomości:</strong> "Ochrona danych osobowych"
           </p>
           <p>Odpowiemy na Twoje zapytanie w ciągu 30 dni.</p>

@@ -103,7 +103,7 @@
 
         <section class="terms-section" data-aos="fade-up">
           <h2>9. Reklamacje</h2>
-          <p>Reklamacje dotyczące usług można zgłaszać na adres e-mail: <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a></p>
+          <p>Reklamacje dotyczące usług można zgłaszać na adres e-mail: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a></p>
           <p>Reklamacja powinna zawierać:</p>
           <ul>
             <li>Opis problemu</li>
@@ -130,7 +130,7 @@
           <h2>12. Kontakt</h2>
           <p>W razie pytań dotyczących Regulaminu prosimy o kontakt:</p>
           <p>
-            <strong>Email:</strong> <a href="mailto:kontakt@snapevents.pl">kontakt@snapevents.pl</a><br>
+            <strong>Email:</strong> <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             <strong>Strona:</strong> <a href="https://snapevents.pl">www.snapevents.pl</a>
           </p>
         </section>
