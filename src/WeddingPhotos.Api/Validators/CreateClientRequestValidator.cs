@@ -80,10 +80,10 @@ public class CreateClientRequestValidator : AbstractValidator<CreateClientReques
             .When(x => !string.IsNullOrEmpty(x.AccentColor))
             .WithMessage("Kolor akcentu musi być w formacie HEX (np. #3b82f6)");
 
-        // Storage
+        // Storage — accepts bare folder ID or full Google Drive URL
         RuleFor(x => x.GoogleStorageUrl)
-            .NotEmpty().WithMessage("URL storage jest wymagany")
-            .Must(BeValidUrl).WithMessage("Nieprawidłowy format URL storage");
+            .NotEmpty().WithMessage("ID lub URL folderu Google Drive jest wymagany")
+            .Must(BeValidGoogleDriveInput).WithMessage("Podaj ID folderu Google Drive lub pełny URL folderu");
     }
 
     private bool BeValidGuid(string guid)
@@ -96,9 +96,12 @@ public class CreateClientRequestValidator : AbstractValidator<CreateClientReques
         return ApplicationConstants.EventTypes.All.Contains(eventType);
     }
 
-    private bool BeValidUrl(string url)
+    private bool BeValidGoogleDriveInput(string value)
     {
-        return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
-            && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        // Bare folder ID: alphanumeric + dash + underscore
+        if (System.Text.RegularExpressions.Regex.IsMatch(value, @"^[a-zA-Z0-9_-]{10,}$")) return true;
+        // Full Google Drive URL
+        return value.Contains("drive.google.com");
     }
 }
