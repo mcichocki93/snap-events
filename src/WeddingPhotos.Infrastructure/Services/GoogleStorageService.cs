@@ -219,26 +219,21 @@ public class GoogleStorageService : IGoogleStorageService
         }
     }
 
-    public async Task<string> GetPhotoDownloadUrlAsync(string photoId)
+    public async Task<(Stream stream, string mimeType, string fileName)> GetPhotoStreamAsync(string photoId)
     {
-        try
-        {
-            var request = _driveService.Files.Get(photoId);
-            request.Fields = "webContentLink,id,name";
-            var file = await request.ExecuteAsync();
+        var metaRequest = _driveService.Files.Get(photoId);
+        metaRequest.Fields = "id,name,mimeType";
+        var fileMeta = await metaRequest.ExecuteAsync();
 
-            if (!string.IsNullOrEmpty(file.WebContentLink))
-            {
-                return file.WebContentLink;
-            }
+        var mimeType = fileMeta.MimeType ?? "image/jpeg";
+        var fileName = fileMeta.Name ?? $"photo_{photoId}.jpg";
 
-            return $"https://drive.google.com/uc?export=download&id={photoId}";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get download URL for photo {PhotoId}", photoId);
-            return $"https://drive.google.com/file/d/{photoId}/view";
-        }
+        var memoryStream = new MemoryStream();
+        var downloadRequest = _driveService.Files.Get(photoId);
+        await downloadRequest.DownloadAsync(memoryStream);
+        memoryStream.Position = 0;
+
+        return (memoryStream, mimeType, fileName);
     }
 
     public async Task<bool> DeletePhotoAsync(string photoId)

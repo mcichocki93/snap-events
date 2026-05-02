@@ -17,6 +17,6 @@ public interface IGalleryService
         string contentType,
         long fileSize);
 
-    Task<(bool Success, string? DownloadUrl, string? ErrorMessage)> GetPhotoDownloadUrlAsync(
+    Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, string? ErrorMessage)> GetPhotoStreamAsync(
         string photoId);
 }

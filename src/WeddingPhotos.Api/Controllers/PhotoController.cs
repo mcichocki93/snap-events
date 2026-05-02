@@ -164,48 +164,25 @@ public class PhotoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds)]
-    public async Task<ActionResult> ProxyPhoto(string photoId, [FromQuery] string? size = null)
+    public async Task<ActionResult> ProxyPhoto(string photoId)
     {
         try
         {
-            // SECURITY: Validate photoId
             if (!InputValidator.IsValidGuid(photoId))
             {
                 _logger.LogWarning(
                     "Proxy request with invalid photoId from {IP}: {PhotoId}",
-                    HttpContext.Connection.RemoteIpAddress,
-                    photoId
-                );
+                    HttpContext.Connection.RemoteIpAddress, photoId);
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
             }
 
-            // Get download URL from service
-            var (success, downloadUrl, errorMessage) = await _galleryService.GetPhotoDownloadUrlAsync(photoId);
+            var (success, stream, mimeType, _, errorMessage) = await _galleryService.GetPhotoStreamAsync(photoId);
 
-            if (!success || string.IsNullOrEmpty(downloadUrl))
-            {
+            if (!success || stream == null)
                 return NotFound(new { message = errorMessage });
-            }
-
-            var httpClient = _httpClientFactory.CreateClient("PhotoProxy");
-
-            var response = await httpClient.GetAsync(downloadUrl);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "Failed to fetch photo from Google Drive: {PhotoId}, Status: {Status}",
-                    photoId, response.StatusCode
-                );
-                return NotFound(new { message = ApplicationConstants.ErrorMessages.PhotoNotFound });
-            }
-
-            var contentType = response.Content.Headers.ContentType?.ToString() ?? "image/jpeg";
-            var stream = await response.Content.ReadAsStreamAsync();
 
             Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
-
-            return File(stream, contentType);
+            return File(stream, mimeType ?? "image/jpeg");
         }
         catch (Exception ex)
         {
@@ -221,47 +198,20 @@ public class PhotoController : ControllerBase
     {
         try
         {
-            // SECURITY: Validate photoId
             if (!InputValidator.IsValidGuid(photoId))
-            {
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
-            }
 
-            // Get download URL from service
-            var (success, downloadUrl, errorMessage) = await _galleryService.GetPhotoDownloadUrlAsync(photoId);
+            var (success, stream, mimeType, fileName, errorMessage) = await _galleryService.GetPhotoStreamAsync(photoId);
 
-            if (!success || string.IsNullOrEmpty(downloadUrl))
-            {
+            if (!success || stream == null)
                 return NotFound(new { message = errorMessage });
-            }
 
-            var httpClient = _httpClientFactory.CreateClient("PhotoProxy");
-            var response = await httpClient.GetAsync(downloadUrl);
+            var safeFileName = InputValidator.SanitizeFileName(fileName ?? $"photo_{photoId}.jpg");
 
-            if (!response.IsSuccessStatusCode)
-            {
-                return NotFound(new { message = ApplicationConstants.ErrorMessages.PhotoNotFound });
-            }
+            _logger.LogInformation("Photo download: {PhotoId}, IP: {IP}",
+                photoId, HttpContext.Connection.RemoteIpAddress);
 
-            var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-            var fileName = $"photo_{photoId}.jpg";
-
-            if (response.Content.Headers.ContentDisposition?.FileName != null)
-            {
-                fileName = InputValidator.SanitizeFileName(
-                    response.Content.Headers.ContentDisposition.FileName.Trim('"')
-                );
-            }
-
-            var stream = await response.Content.ReadAsStreamAsync();
-
-            _logger.LogInformation(
-                "Photo download: {PhotoId}, IP: {IP}",
-                photoId,
-                HttpContext.Connection.RemoteIpAddress
-            );
-
-            return File(stream, contentType, fileName);
+            return File(stream, mimeType ?? "application/octet-stream", safeFileName);
         }
         catch (Exception ex)
         {

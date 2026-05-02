@@ -286,18 +286,18 @@ public class GalleryService : IGalleryService
         }
     }
 
-    public async Task<(bool Success, string? DownloadUrl, string? ErrorMessage)> GetPhotoDownloadUrlAsync(
+    public async Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, string? ErrorMessage)> GetPhotoStreamAsync(
         string photoId)
     {
         try
         {
-            var downloadUrl = await _storageService.GetPhotoDownloadUrlAsync(photoId);
-            return (true, downloadUrl, null);
+            var (stream, mimeType, fileName) = await _storageService.GetPhotoStreamAsync(photoId);
+            return (true, stream, mimeType, fileName, null);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting photo download URL: {PhotoId}", photoId);
-            return (false, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
+            _logger.LogError(ex, "Error getting photo stream: {PhotoId}", photoId);
+            return (false, null, null, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
         }
     }
 
