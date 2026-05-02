@@ -103,8 +103,9 @@
       <section class="form-section">
         <h3>Google Drive</h3>
         <div class="form-group">
-          <label>URL folderu Google Drive *</label>
-          <input v-model="form.googleStorageUrl" type="url" required placeholder="https://drive.google.com/drive/folders/..." />
+          <label>ID folderu Google Drive *</label>
+          <input v-model="form.googleStorageUrl" type="text" required placeholder="np. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs lub pełny URL folderu" />
+          <small style="color:#6b7280">Skopiuj ID z URL folderu Drive (część po /folders/) lub wklej cały URL</small>
         </div>
         <div v-if="!isEdit" class="form-group">
           <label>GUID galerii</label>
