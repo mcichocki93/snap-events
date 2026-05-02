@@ -49,7 +49,7 @@
             <li>Pełna personalizacja (kolory, czcionki, teksty)</li>
           </ul>
 
-          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Po upływie okresu dostępności galeria zostaje automatycznie usunięta z naszych serwerów.</p>
+          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Po upływie okresu dostępności dostęp do galerii zostaje wyłączony. Zdjęcia przechowywane są na koncie Google Drive właściciela galerii.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
