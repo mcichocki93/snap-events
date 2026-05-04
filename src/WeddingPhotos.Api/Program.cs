@@ -5,6 +5,7 @@ using Hangfire;
 using Hangfire.MemoryStorage;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -144,6 +145,11 @@ try
                   .SetIsOriginAllowedToAllowWildcardSubdomains();
         });
     });
+
+    // Data Protection — persist keys to mounted volume so they survive container restarts
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo("/app/logs/keys"))
+        .SetApplicationName("WeddingPhotos");
 
     // Rate Limiting
     builder.Services.AddMemoryCache();

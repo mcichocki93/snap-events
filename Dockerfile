@@ -47,7 +47,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 # Set environment variables defaults
+# Use ASPNETCORE_HTTP_PORTS (not ASPNETCORE_URLS) to avoid conflict with base image HTTP_PORTS=8080 default
 ENV ASPNETCORE_ENVIRONMENT=Production \
-    ASPNETCORE_URLS=http://+:5000
+    ASPNETCORE_HTTP_PORTS=5000
 
 ENTRYPOINT ["dotnet", "WeddingPhotos.Api.dll"]

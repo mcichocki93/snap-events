@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using StackExchange.Redis;
+using System.Collections.Concurrent;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Infrastructure.Configuration;
 
@@ -16,6 +17,7 @@ public class CacheService : ICacheService
     private readonly ILogger<CacheService> _logger;
     private readonly RedisCacheSettings _settings;
     private readonly bool _isRedisAvailable;
+    private readonly ConcurrentDictionary<string, byte> _memoryKeys = new();
 
     public CacheService(
         IMemoryCache memoryCache,
@@ -110,6 +112,7 @@ public class CacheService : ICacheService
 
             // Always set in memory cache as fallback
             _memoryCache.Set(key, value, expirationTime);
+            _memoryKeys.TryAdd(key, 0);
             _logger.LogDebug("Cache SET in Memory: {Key}, Expiration: {Expiration}min", key, expirationTime.TotalMinutes);
         }
         catch (Exception ex)
@@ -131,6 +134,7 @@ public class CacheService : ICacheService
 
             // Remove from memory cache
             _memoryCache.Remove(key);
+            _memoryKeys.TryRemove(key, out _);
             _logger.LogDebug("Cache REMOVED from Memory: {Key}", key);
         }
         catch (Exception ex)
@@ -156,9 +160,14 @@ public class CacheService : ICacheService
                 }
             }
 
-            // For memory cache, we can't efficiently remove by prefix
-            // so we log a warning (consider using IMemoryCache with custom tracking if needed)
-            _logger.LogWarning("Memory cache doesn't support prefix removal for: {Prefix}", prefix);
+            // Remove matching keys from memory cache using the tracked key set
+            var keysToRemove = _memoryKeys.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+            foreach (var key in keysToRemove)
+            {
+                _memoryCache.Remove(key);
+                _memoryKeys.TryRemove(key, out _);
+            }
+            _logger.LogDebug("Cache REMOVED {Count} keys from Memory with prefix: {Prefix}", keysToRemove.Count, prefix);
         }
         catch (Exception ex)
         {
