@@ -297,9 +297,9 @@ try
     var healthChecksBuilder = builder.Services.AddHealthChecks()
         .AddCheck("api", () => HealthCheckResult.Healthy("API is running"))
         .AddMongoDb(
-            _ => new MongoClient(mongoConnectionString!),
+            sp => sp.GetRequiredService<IMongoClient>(),
             name: "mongodb",
-            failureStatus: HealthStatus.Unhealthy,
+            failureStatus: HealthStatus.Degraded,
             tags: new[] { "db", "mongodb" });
 
     // Add Redis health check only if enabled
