@@ -146,7 +146,11 @@ try
     });
 
     // Rate Limiting
-    builder.Services.AddMemoryCache();
+    builder.Services.AddMemoryCache(options =>
+    {
+        options.SizeLimit = 10_000;
+        options.CompactionPercentage = 0.25;
+    });
     builder.Services.Configure<IpRateLimitOptions>(options =>
     {
         options.EnableEndpointRateLimiting = true;

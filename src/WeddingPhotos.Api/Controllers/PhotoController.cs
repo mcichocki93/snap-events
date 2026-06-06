@@ -13,16 +13,13 @@ public class PhotoController : ControllerBase
 {
     private readonly IGalleryService _galleryService;
     private readonly ILogger<PhotoController> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
 
     public PhotoController(
         IGalleryService galleryService,
-        ILogger<PhotoController> logger,
-        IHttpClientFactory httpClientFactory)
+        ILogger<PhotoController> logger)
     {
         _galleryService = galleryService;
         _logger = logger;
-        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet("gallery/{guid}")]

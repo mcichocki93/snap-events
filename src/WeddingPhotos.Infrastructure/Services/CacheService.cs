@@ -70,7 +70,11 @@ public class CacheService : ICacheService
                     var value = JsonConvert.DeserializeObject<T>(redisValue.ToString());
 
                     // Also cache in memory for faster subsequent access
-                    _memoryCache.Set(key, value, TimeSpan.FromMinutes(5));
+                    _memoryCache.Set(key, value, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                        Size = 1
+                    });
 
                     _logger.LogDebug("Cache HIT from Redis: {Key}", key);
                     return value;
@@ -109,7 +113,11 @@ public class CacheService : ICacheService
             }
 
             // Always set in memory cache as fallback
-            _memoryCache.Set(key, value, expirationTime);
+            _memoryCache.Set(key, value, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = expirationTime,
+                Size = 1
+            });
             _logger.LogDebug("Cache SET in Memory: {Key}, Expiration: {Expiration}min", key, expirationTime.TotalMinutes);
         }
         catch (Exception ex)
