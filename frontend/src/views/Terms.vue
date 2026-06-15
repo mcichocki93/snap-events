@@ -4,7 +4,7 @@
       <div class="terms-header" data-aos="fade-up">
         <h1 class="terms-title">Regulamin</h1>
         <p class="terms-subtitle">Snap Events - Galeria zdjęć na uroczystości</p>
-        <p class="terms-date">Ostatnia aktualizacja: 9 stycznia 2026</p>
+        <p class="terms-date">Ostatnia aktualizacja: 6 czerwca 2026</p>
       </div>
 
       <div class="terms-content">
@@ -49,7 +49,7 @@
             <li>Pełna personalizacja (kolory, czcionki, teksty)</li>
           </ul>
 
-          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Po upływie okresu dostępności dostęp do galerii zostaje wyłączony. Zdjęcia przechowywane są na koncie Google Drive właściciela galerii.</p>
+          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Po upływie okresu dostępności dostęp do galerii zostaje wyłączony. Zdjęcia przechowywane są na Google Drive Snap Events. Po wygaśnięciu galerii organizator może skontaktować się z nami w celu uzyskania linku do folderu ze zdjęciami i ich pobrania.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
