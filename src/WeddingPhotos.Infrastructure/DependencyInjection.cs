@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IGalleryService, GalleryService>();
         services.AddScoped<IClientService, ClientService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<GalleryExpiryJob>();
 
         return services;
     }

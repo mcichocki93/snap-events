@@ -416,6 +416,15 @@ try
 
     app.MapControllers();
 
+    if (hangfireEnabled)
+    {
+        RecurringJob.AddOrUpdate<GalleryExpiryJob>(
+            "gallery-expiry-reminders",
+            job => job.SendExpiryRemindersAsync(),
+            "0 9 * * *"); // codziennie o 9:00 UTC
+        Log.Information("Hangfire recurring job registered: gallery-expiry-reminders");
+    }
+
     Log.Information("WeddingPhotos API started successfully");
 
     app.Run();

@@ -129,6 +129,57 @@ public class NotificationService : INotificationService
         }
     }
 
+    public async Task SendGalleryExpiryReminderAsync(Client client)
+    {
+        if (string.IsNullOrEmpty(_discordWebhookUrl))
+        {
+            _logger.LogWarning("Discord webhook not configured - cannot send expiry reminder for {Guid}", client.Guid);
+            return;
+        }
+
+        var folderId = ExtractFolderIdFromUrl(client.GoogleStorageUrl);
+        var folderUrl = $"https://drive.google.com/drive/folders/{folderId}";
+
+        var payload = new
+        {
+            content = "⏰ **Galeria wygasa za 7 dni - wyślij link do zdjęć!**",
+            embeds = new object[]
+            {
+                new
+                {
+                    title = $"{client.EventName} — {client.GetEventTypeDisplayName()}",
+                    color = 16744272, // Orange
+                    fields = new object[]
+                    {
+                        new { name = "👤 Klient", value = client.GetFullName(), inline = true },
+                        new { name = "📧 Email", value = client.Email, inline = true },
+                        new { name = "📅 Wygasa", value = client.DateTo.ToString("dd.MM.yyyy"), inline = true },
+                        new { name = "📁 Folder Google Drive", value = folderUrl }
+                    },
+                    timestamp = DateTime.UtcNow.ToString("o"),
+                    footer = new { text = "Snap Events — przypomnienie automatyczne" }
+                }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync(_discordWebhookUrl, content);
+
+        if (response.IsSuccessStatusCode)
+            _logger.LogInformation("Expiry reminder sent for client {Guid}", client.Guid);
+        else
+            _logger.LogError("Failed to send expiry reminder for {Guid}: {Status}", client.Guid, response.StatusCode);
+    }
+
+    private static string ExtractFolderIdFromUrl(string url)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(url, @"/folders/([a-zA-Z0-9_-]+)");
+        if (match.Success) return match.Groups[1].Value;
+        var queryMatch = System.Text.RegularExpressions.Regex.Match(url, @"^[a-zA-Z0-9_-]+$");
+        return queryMatch.Success ? url : url;
+    }
+
     private async Task SendDiscordNotificationAsync(ContactFormRequest request)
     {
         var subject = !string.IsNullOrEmpty(request.Subject)

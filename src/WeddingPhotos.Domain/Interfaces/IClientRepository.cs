@@ -12,4 +12,5 @@ public interface IClientRepository
     Task<bool> DeactivateAsync(string guid);
     Task<bool> DeleteAsync(string guid);
     Task<List<Client>> GetExpiredClientsAsync();
+    Task<List<Client>> GetExpiringInDaysAsync(int days);
 }

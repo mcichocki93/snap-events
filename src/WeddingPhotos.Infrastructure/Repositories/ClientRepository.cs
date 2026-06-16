@@ -244,6 +244,28 @@ public class ClientRepository : IClientRepository
         }
     }
 
+    public async Task<List<Client>> GetExpiringInDaysAsync(int days)
+    {
+        try
+        {
+            var from = DateTime.UtcNow.Date.AddDays(days);
+            var to = from.AddDays(1);
+
+            var filter = Builders<Client>.Filter.And(
+                Builders<Client>.Filter.Gte(x => x.DateTo, from),
+                Builders<Client>.Filter.Lt(x => x.DateTo, to),
+                Builders<Client>.Filter.Eq(x => x.IsActive, true)
+            );
+
+            return await _clientsCollection.Find(filter).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving clients expiring in {Days} days", days);
+            throw;
+        }
+    }
+
     private void ValidateClient(Client client)
     {
         var errors = new List<string>();
