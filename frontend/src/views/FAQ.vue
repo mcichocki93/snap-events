@@ -117,7 +117,7 @@ const faqItems = [
   {
     category: 'general',
     question: 'Jak długo trwa przygotowanie galerii?',
-    answer: 'Galeria jest gotowa natychmiast po dokonaniu płatności! Otrzymasz email z linkiem do galerii oraz kodem QR w ciągu kilku minut.'
+    answer: 'Galerię przygotowujemy indywidualnie po dokonaniu płatności. Skontaktujemy się z Tobą i przekażemy link do galerii oraz kod QR.'
   },
   {
     category: 'pricing',
@@ -142,17 +142,17 @@ const faqItems = [
   {
     category: 'technical',
     question: 'Czy zdjęcia są bezpieczne?',
-    answer: 'Tak! Wszystkie zdjęcia są przechowywane w zaszyfrowanej formie i automatycznie przesyłane do Twojego Google Drive. Tylko osoby z linkiem mają dostęp do galerii.'
+    answer: 'Tak! Wszystkie zdjęcia są przechowywane na zabezpieczonym Google Drive Snap Events. Tylko osoby z linkiem mają dostęp do galerii.'
   },
   {
     category: 'technical',
     question: 'Co się dzieje ze zdjęciami po zakończeniu okresu dostępności?',
-    answer: 'Wszystkie zdjęcia są już zapisane na Twoim Google Drive, więc masz do nich stały dostęp. Po upływie okresu dostępności galeria online zostaje automatycznie usunięta z naszych serwerów.'
+    answer: 'Po upływie okresu dostępności galeria online zostaje wyłączona. Skontaktuj się z nami, a przekażemy Ci link do folderu ze wszystkimi zdjęciami, abyś mógł je pobrać i zachować.'
   },
   {
     category: 'technical',
     question: 'Czy mogę pobrać wszystkie zdjęcia jednocześnie?',
-    answer: 'Tak! Wszystkie zdjęcia są dostępne na Twoim Google Drive, skąd możesz je łatwo pobrać. Dodatkowo w panelu galerii dostępna jest opcja "Pobierz wszystkie" do pobrania archiwum ZIP.'
+    answer: 'Tak! Pojedyncze zdjęcia możesz pobrać bezpośrednio z galerii. Na życzenie udostępniamy też link do folderu ze wszystkimi zdjęciami w pełnej jakości.'
   },
   {
     category: 'technical',
@@ -162,7 +162,7 @@ const faqItems = [
   {
     category: 'technical',
     question: 'Czy potrzebuję konta Google?',
-    answer: 'Jako organizator potrzebujesz konta Google, aby zdjęcia mogły być automatycznie przesyłane do Twojego Google Drive. Goście dodający zdjęcia nie potrzebują żadnego konta.'
+    answer: 'Nie! Ani organizator, ani goście nie potrzebują konta Google. My zajmujemy się przechowywaniem zdjęć — wystarczy przeglądarka internetowa.'
   },
   {
     category: 'photos',
@@ -182,7 +182,7 @@ const faqItems = [
   {
     category: 'photos',
     question: 'Co z jakością zdjęć? Czy są kompresowane?',
-    answer: 'Zdjęcia są lekko optymalizowane do wyświetlania w galerii, ale oryginalne pliki w pełnej jakości są zawsze zapisywane na Twoim Google Drive.'
+    answer: 'Zdjęcia są lekko optymalizowane do wyświetlania w galerii, ale oryginalne pliki w pełnej jakości są zawsze przechowywane bezpiecznie i możesz je otrzymać.'
   },
   {
     category: 'technical',

@@ -69,7 +69,7 @@
           <p>Twoje dane mogą być udostępniane następującym podmiotom:</p>
 
           <ul>
-            <li><strong>Google Drive</strong> - zdjęcia są automatycznie przesyłane do Twojego konta Google Drive (na podstawie Twojej zgody)</li>
+            <li><strong>Google Drive</strong> - zdjęcia są przechowywane na Google Drive zarządzanym przez Snap Events (Google jako podmiot przetwarzający)</li>
             <li><strong>Operator płatności</strong> - przetwarzanie transakcji płatniczych</li>
             <li><strong>Dostawca hostingu</strong> - przechowywanie danych na serwerach</li>
             <li><strong>Dostawca CDN</strong> - szybsze ładowanie zdjęć</li>
@@ -141,13 +141,13 @@
 
         <section class="privacy-section" data-aos="fade-up">
           <h2>10. Google Drive API</h2>
-          <p>Snap Events używa Google Drive API do automatycznego przesyłania zdjęć do Twojego konta Google Drive.</p>
+          <p>Snap Events używa Google Drive API do przechowywania przesłanych zdjęć na dysku Google Drive zarządzanym przez Snap Events.</p>
 
           <ul>
-            <li>Dostęp do Google Drive wymaga Twojej wyraźnej zgody</li>
-            <li>Mamy dostęp tylko do folderu utworzonego przez aplikację</li>
-            <li>Nie mamy dostępu do innych plików na Twoim Google Drive</li>
-            <li>Możesz w każdej chwili cofnąć uprawnienia w ustawieniach konta Google</li>
+            <li>Zdjęcia przechowywane są w dedykowanym folderze galerii na koncie Snap Events</li>
+            <li>Nie wymagamy od Ciebie ani od gości konta Google</li>
+            <li>Dostęp do galerii mają wyłącznie osoby z unikalnym linkiem</li>
+            <li>Po wygaśnięciu galerii możesz otrzymać link do pobrania swoich zdjęć</li>
           </ul>
 
           <p>Przetwarzanie danych przez Google podlega <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Polityce Prywatności Google</a>.</p>

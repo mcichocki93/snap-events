@@ -4,6 +4,7 @@ using System.Text.Json;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
+using WeddingPhotos.Domain.Validation;
 
 namespace WeddingPhotos.Infrastructure.Services;
 
@@ -137,7 +138,7 @@ public class NotificationService : INotificationService
             return;
         }
 
-        var folderId = ExtractFolderIdFromUrl(client.GoogleStorageUrl);
+        var folderId = GoogleDriveHelper.ExtractFolderId(client.GoogleStorageUrl);
         var folderUrl = $"https://drive.google.com/drive/folders/{folderId}";
 
         var payload = new
@@ -170,14 +171,6 @@ public class NotificationService : INotificationService
             _logger.LogInformation("Expiry reminder sent for client {Guid}", client.Guid);
         else
             _logger.LogError("Failed to send expiry reminder for {Guid}: {Status}", client.Guid, response.StatusCode);
-    }
-
-    private static string ExtractFolderIdFromUrl(string url)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(url, @"/folders/([a-zA-Z0-9_-]+)");
-        if (match.Success) return match.Groups[1].Value;
-        var queryMatch = System.Text.RegularExpressions.Regex.Match(url, @"^[a-zA-Z0-9_-]+$");
-        return queryMatch.Success ? url : url;
     }
 
     private async Task SendDiscordNotificationAsync(ContactFormRequest request)

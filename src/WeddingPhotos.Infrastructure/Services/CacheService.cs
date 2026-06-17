@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,11 @@ public class CacheService : ICacheService
     private readonly ILogger<CacheService> _logger;
     private readonly RedisCacheSettings _settings;
     private readonly bool _isRedisAvailable;
+
+    // Tracks keys currently stored in the in-memory cache so we can support
+    // prefix-based removal (IMemoryCache has no native "remove by prefix").
+    // Keys are removed automatically on eviction via PostEvictionCallback.
+    private static readonly ConcurrentDictionary<string, byte> _memoryKeys = new();
 
     public CacheService(
         IMemoryCache memoryCache,
@@ -70,11 +76,7 @@ public class CacheService : ICacheService
                     var value = JsonConvert.DeserializeObject<T>(redisValue.ToString());
 
                     // Also cache in memory for faster subsequent access
-                    _memoryCache.Set(key, value, new MemoryCacheEntryOptions
-                    {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
-                        Size = 1
-                    });
+                    SetMemory(key, value, TimeSpan.FromMinutes(5));
 
                     _logger.LogDebug("Cache HIT from Redis: {Key}", key);
                     return value;
@@ -113,11 +115,7 @@ public class CacheService : ICacheService
             }
 
             // Always set in memory cache as fallback
-            _memoryCache.Set(key, value, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = expirationTime,
-                Size = 1
-            });
+            SetMemory(key, value, expirationTime);
             _logger.LogDebug("Cache SET in Memory: {Key}, Expiration: {Expiration}min", key, expirationTime.TotalMinutes);
         }
         catch (Exception ex)
@@ -139,6 +137,7 @@ public class CacheService : ICacheService
 
             // Remove from memory cache
             _memoryCache.Remove(key);
+            _memoryKeys.TryRemove(key, out _);
             _logger.LogDebug("Cache REMOVED from Memory: {Key}", key);
         }
         catch (Exception ex)
@@ -164,13 +163,40 @@ public class CacheService : ICacheService
                 }
             }
 
-            // For memory cache, we can't efficiently remove by prefix
-            // so we log a warning (consider using IMemoryCache with custom tracking if needed)
-            _logger.LogWarning("Memory cache doesn't support prefix removal for: {Prefix}", prefix);
+            // Remove matching keys from memory cache using the tracked key set
+            var matchingKeys = _memoryKeys.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+            foreach (var key in matchingKeys)
+            {
+                _memoryCache.Remove(key);
+                _memoryKeys.TryRemove(key, out _);
+            }
+
+            _logger.LogDebug("Cache REMOVED {Count} keys from Memory with prefix: {Prefix}", matchingKeys.Count, prefix);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing cache by prefix: {Prefix}", prefix);
         }
+    }
+
+    /// <summary>
+    /// Sets a value in the in-memory cache and tracks the key so it can be
+    /// removed later by prefix. The eviction callback keeps the tracking set
+    /// in sync when entries expire or are compacted.
+    /// </summary>
+    private void SetMemory<T>(string key, T value, TimeSpan expiration)
+    {
+        var options = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = expiration
+        };
+
+        options.RegisterPostEvictionCallback((evictedKey, _, _, _) =>
+        {
+            _memoryKeys.TryRemove(evictedKey.ToString()!, out _);
+        });
+
+        _memoryCache.Set(key, value, options);
+        _memoryKeys[key] = 0;
     }
 }

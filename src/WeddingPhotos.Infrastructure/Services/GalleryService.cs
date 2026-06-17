@@ -236,7 +236,7 @@ public class GalleryService : IGalleryService
                 fileSize / (1024.0 * 1024.0));
 
             // Extract folder ID from URL
-            var folderId = ExtractFolderIdFromUrl(client.GoogleStorageUrl);
+            var folderId = GoogleDriveHelper.ExtractFolderId(client.GoogleStorageUrl);
 
             // Upload file
             var photoId = await _storageService.UploadPhotoAsync(
@@ -299,21 +299,5 @@ public class GalleryService : IGalleryService
             _logger.LogError(ex, "Error getting photo stream: {PhotoId}", photoId);
             return (false, null, null, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
         }
-    }
-
-    private string ExtractFolderIdFromUrl(string url)
-    {
-        // Extract folder ID from Google Drive URL or return as-is
-        if (url.Contains("drive.google.com/drive/folders/"))
-        {
-            var parts = url.Split('/');
-            var folderIndex = Array.IndexOf(parts, "folders");
-            if (folderIndex >= 0 && folderIndex < parts.Length - 1)
-            {
-                return parts[folderIndex + 1].Split('?')[0];
-            }
-        }
-
-        return url;
     }
 }

@@ -158,6 +158,7 @@ try
         options.GeneralRules = new List<RateLimitRule>
         {
             new RateLimitRule { Endpoint = "*", Period = "1m", Limit = 60 },
+            new RateLimitRule { Endpoint = "*/admin/login", Period = "5m", Limit = 10 }, // Anti-brute-force on admin login
             new RateLimitRule { Endpoint = "*/photo/upload/*", Period = "1h", Limit = 100 },
             new RateLimitRule { Endpoint = "*/photo/gallery/*", Period = "1m", Limit = 30 },
             new RateLimitRule { Endpoint = "*/photo/proxy/*", Period = "1m", Limit = 100 },
@@ -259,6 +260,30 @@ try
     var jwtSecret = Environment.GetEnvironmentVariable("ADMIN_JWT_SECRET")
         ?? builder.Configuration["Admin:JwtSecret"]
         ?? throw new InvalidOperationException("Admin JWT secret is not configured.");
+
+    // Security guard: refuse to start in Production with a weak or default secret.
+    // Prevents silently falling back to the placeholder in appsettings.json (which is
+    // committed to the repo and would make admin JWTs forgeable).
+    if (builder.Environment.IsProduction())
+    {
+        var defaultSecretMarkers = new[] { "change-this", "change-me", "before-production" };
+        if (jwtSecret.Length < 32 ||
+            defaultSecretMarkers.Any(m => jwtSecret.Contains(m, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                "ADMIN_JWT_SECRET is missing, too short (<32 chars), or set to a default placeholder. " +
+                "Set a strong random secret via the ADMIN_JWT_SECRET environment variable.");
+        }
+
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+            ?? builder.Configuration["Admin:Password"];
+        if (string.IsNullOrEmpty(adminPassword) ||
+            adminPassword.Contains("change-me", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "ADMIN_PASSWORD is missing or set to a default placeholder. Set a strong admin password.");
+        }
+    }
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>

@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
+using WeddingPhotos.Domain.Validation;
 using WeddingPhotos.Infrastructure.Configuration;
 
 namespace WeddingPhotos.Infrastructure.Services;
@@ -150,7 +150,7 @@ public class GoogleStorageService : IGoogleStorageService
     {
         try
         {
-            var folderId = ExtractFolderIdFromUrl(folderUrl);
+            var folderId = GoogleDriveHelper.ExtractFolderId(folderUrl);
             var photos = new List<PhotoInfo>();
 
             // Google Drive API max page size is 1000
@@ -337,40 +337,6 @@ public class GoogleStorageService : IGoogleStorageService
             ".tiff" or ".tif" => "image/tiff",
             _ => "application/octet-stream"
         };
-    }
-
-    private string ExtractFolderIdFromUrl(string folderUrl)
-    {
-        try
-        {
-            var patterns = new[]
-            {
-                @"/folders/([a-zA-Z0-9_-]+)",
-                @"[?&]id=([a-zA-Z0-9_-]+)",
-                @"/file/d/([a-zA-Z0-9_-]+)"
-            };
-
-            foreach (var pattern in patterns)
-            {
-                var match = Regex.Match(folderUrl, pattern);
-                if (match.Success)
-                {
-                    return match.Groups[1].Value;
-                }
-            }
-
-            if (Regex.IsMatch(folderUrl, @"^[a-zA-Z0-9_-]+$"))
-            {
-                return folderUrl;
-            }
-
-            throw new ArgumentException($"Invalid Google Drive folder URL: {folderUrl}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to extract folder ID from URL: {FolderUrl}", folderUrl);
-            throw;
-        }
     }
 
     private static string GetOptimizedThumbnailUrl(string fileId, string? originalThumbnailLink)
