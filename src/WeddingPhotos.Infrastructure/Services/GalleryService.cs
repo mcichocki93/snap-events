@@ -216,12 +216,15 @@ public class GalleryService : IGalleryService
             // Sanitize filename
             var sanitizedFileName = InputValidator.SanitizeFileName(fileName);
 
-            // Check upload quota before uploading (MaxFiles == 0 means unlimited)
-            if (client.MaxFiles > 0 && client.UploadedFilesCount >= client.MaxFiles)
+            // Atomically reserve an upload slot. This both enforces the quota
+            // (race-condition-safe across concurrent guests) and tracks the
+            // count for unlimited galleries too. Returns null if quota exhausted.
+            var reservedClient = await _clientRepository.TryReserveUploadSlotAsync(guid);
+            if (reservedClient == null)
             {
                 _logger.LogWarning(
-                    "Upload rejected - quota exceeded for GUID={Guid}: {Count}/{Max}",
-                    guid, client.UploadedFilesCount, client.MaxFiles);
+                    "Upload rejected - quota exceeded for GUID={Guid}: {Max} limit reached",
+                    guid, client.MaxFiles);
                 return (false, new UploadPhotoResponse
                 {
                     Success = false,
@@ -238,14 +241,25 @@ public class GalleryService : IGalleryService
             // Extract folder ID from URL
             var folderId = GoogleDriveHelper.ExtractFolderId(client.GoogleStorageUrl);
 
-            // Upload file
-            var photoId = await _storageService.UploadPhotoAsync(
-                fileStream,
-                sanitizedFileName,
-                folderId);
+            // Upload file. If it fails, release the reserved slot so the count
+            // stays accurate.
+            string? photoId;
+            try
+            {
+                photoId = await _storageService.UploadPhotoAsync(
+                    fileStream,
+                    sanitizedFileName,
+                    folderId);
+            }
+            catch
+            {
+                await _clientRepository.ReleaseUploadSlotAsync(guid);
+                throw;
+            }
 
             if (string.IsNullOrEmpty(photoId))
             {
+                await _clientRepository.ReleaseUploadSlotAsync(guid);
                 _logger.LogError("Upload failed - no photoId returned for {Guid}", guid);
                 return (false, new UploadPhotoResponse
                 {
@@ -254,25 +268,26 @@ public class GalleryService : IGalleryService
                 }, ApplicationConstants.ErrorMessages.UploadError);
             }
 
-            // Increment uploaded files counter (only if limit is enabled)
-            if (client.MaxFiles > 0)
-            {
-                await _clientRepository.UpdateUploadedFilesCountAsync(guid, 1);
-            }
-
             // Invalidate gallery cache for this client (all pages)
             await _cacheService.RemoveByPrefixAsync($"gallery:{guid}:");
 
+            // RemainingUploads: -1 signals "unlimited" (MaxFiles == 0)
+            var remainingUploads = reservedClient.MaxFiles == 0
+                ? -1
+                : Math.Max(0, reservedClient.MaxFiles - reservedClient.UploadedFilesCount);
+
             _logger.LogInformation(
-                "Upload successful and cache invalidated: GUID={Guid}, PhotoId={PhotoId}",
+                "Upload successful and cache invalidated: GUID={Guid}, PhotoId={PhotoId}, Remaining={Remaining}",
                 guid,
-                photoId);
+                photoId,
+                remainingUploads);
 
             return (true, new UploadPhotoResponse
             {
                 Success = true,
                 PhotoId = photoId,
-                Message = ApplicationConstants.SuccessMessages.PhotoUploadedSuccessfully
+                Message = ApplicationConstants.SuccessMessages.PhotoUploadedSuccessfully,
+                RemainingUploads = remainingUploads
             }, null);
         }
         catch (Exception ex)

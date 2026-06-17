@@ -210,7 +210,7 @@ const form = ref({
   dateTo: '',
   isActive: true,
   maxFiles: 0,
-  maxFileSize: 10485760,
+  maxFileSize: 20971520,
   backgroundColor: '#667eea',
   backgroundColorSecondary: '#764ba2',
   fontColor: '#ffffff',

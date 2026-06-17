@@ -191,14 +191,64 @@ public class ClientRepository : IClientRepository
             await _clientsCollection.UpdateOneAsync(filter, update);
 
             _logger.LogInformation(
-                "Updated uploaded files count for guid: {Guid}, added: {Count}", 
-                guid, 
+                "Updated uploaded files count for guid: {Guid}, added: {Count}",
+                guid,
                 additionalFiles);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating uploaded files count for guid: {Guid}", guid);
             throw;
+        }
+    }
+
+    public async Task<Client?> TryReserveUploadSlotAsync(string guid)
+    {
+        try
+        {
+            // Atomic guard: only increment when unlimited (MaxFiles == 0) OR
+            // the current count is still below MaxFiles. Done in a single
+            // FindOneAndUpdate so concurrent uploads cannot exceed the limit.
+            var filter = Builders<Client>.Filter.And(
+                Builders<Client>.Filter.Eq(x => x.Guid, guid),
+                Builders<Client>.Filter.Or(
+                    Builders<Client>.Filter.Eq(x => x.MaxFiles, 0),
+                    Builders<Client>.Filter.Where(x => x.UploadedFilesCount < x.MaxFiles)
+                )
+            );
+
+            var update = Builders<Client>.Update.Inc(x => x.UploadedFilesCount, 1);
+            var options = new FindOneAndUpdateOptions<Client>
+            {
+                ReturnDocument = ReturnDocument.After
+            };
+
+            // Returns null when the filter doesn't match (quota exhausted).
+            return await _clientsCollection.FindOneAndUpdateAsync(filter, update, options);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reserving upload slot for guid: {Guid}", guid);
+            throw;
+        }
+    }
+
+    public async Task ReleaseUploadSlotAsync(string guid)
+    {
+        try
+        {
+            // Decrement, but never below zero.
+            var filter = Builders<Client>.Filter.And(
+                Builders<Client>.Filter.Eq(x => x.Guid, guid),
+                Builders<Client>.Filter.Gt(x => x.UploadedFilesCount, 0)
+            );
+            var update = Builders<Client>.Update.Inc(x => x.UploadedFilesCount, -1);
+
+            await _clientsCollection.UpdateOneAsync(filter, update);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error releasing upload slot for guid: {Guid}", guid);
         }
     }
 

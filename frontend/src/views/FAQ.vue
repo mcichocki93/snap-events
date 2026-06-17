@@ -172,7 +172,7 @@ const faqItems = [
   {
     category: 'photos',
     question: 'Czy mogę usunąć niechciane zdjęcia?',
-    answer: 'Tak! Jako organizator masz pełną kontrolę nad galerią. Możesz usuwać pojedyncze zdjęcia, które nie powinny się tam znaleźć.'
+    answer: 'Tak! Jeśli w galerii pojawi się zdjęcie, które nie powinno się tam znaleźć, skontaktuj się z nami na kontakt@snapevents.com.pl — usuniemy je dla Ciebie.'
   },
   {
     category: 'photos',

@@ -5,7 +5,7 @@ public static class ApplicationConstants
     public static class FileUpload
     {
         public const long MaxFileSizeBytes = 104857600; // 100MB
-        public const long DefaultMaxFileSizeBytes = 10485760; // 10MB
+        public const long DefaultMaxFileSizeBytes = 20971520; // 20MB
         public const int MaxFileNameLength = 255;
     }
 

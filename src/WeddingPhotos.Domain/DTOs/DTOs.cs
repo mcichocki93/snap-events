@@ -70,7 +70,7 @@ public class CreateClientRequest
 
     // LIMITS
     public int MaxFiles { get; set; } = 300;
-    public long MaxFileSize { get; set; } = 10485760;
+    public long MaxFileSize { get; set; } = 20971520; // 20MB
 
     // THEME (optional)
     public string? BackgroundColor { get; set; }

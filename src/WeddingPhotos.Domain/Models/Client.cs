@@ -53,7 +53,7 @@ namespace WeddingPhotos.Domain.Models
         public int UploadedFilesCount { get; set; } = 0;
 
         [BsonElement("MaxFileSize")]
-        public long MaxFileSize { get; set; } = 10485760; // 10MB
+        public long MaxFileSize { get; set; } = 20971520; // 20MB
 
         // THEME CUSTOMIZATION
         [BsonElement("BackgroundColor")]
