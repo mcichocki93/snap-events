@@ -254,6 +254,30 @@ function generateGuid() {
   form.value.guid = crypto.randomUUID()
 }
 
+/**
+ * The picker is date-only, so a gallery expires at the end of the day chosen.
+ * Sending plain midnight instead used to walk the expiry backwards by a day on
+ * every save, and made a gallery expiring today look already expired.
+ */
+function toExpiryIso(date: string): string {
+  return `${date}T23:59:59.999Z`
+}
+
+/**
+ * FluentValidation returns a ValidationProblemDetails with an "errors" map, not
+ * the "error" string the rest of the admin API uses, so validation failures used
+ * to surface as a generic message with no clue which field was at fault.
+ */
+function describeSaveError(e: any): string {
+  const errors = e.response?.data?.errors
+  if (errors && typeof errors === 'object') {
+    const messages = Object.values(errors).flat() as string[]
+    if (messages.length) return messages.join(' • ')
+  }
+
+  return e.response?.data?.error ?? 'Błąd zapisu — sprawdź dane'
+}
+
 async function handleSubmit() {
   saving.value = true
   submitError.value = ''
@@ -267,7 +291,7 @@ async function handleSubmit() {
         eventName: form.value.eventName,
         eventType: form.value.eventType,
         eventDate: form.value.eventDate || undefined,
-        dateTo: new Date(form.value.dateTo).toISOString(),
+        dateTo: toExpiryIso(form.value.dateTo),
         isActive: form.value.isActive,
         maxFiles: form.value.maxFiles,
         maxFileSize: form.value.maxFileSize,
@@ -288,7 +312,7 @@ async function handleSubmit() {
         eventName: form.value.eventName,
         eventType: form.value.eventType,
         eventDate: form.value.eventDate || undefined,
-        dateTo: new Date(form.value.dateTo).toISOString(),
+        dateTo: toExpiryIso(form.value.dateTo),
         maxFiles: form.value.maxFiles,
         maxFileSize: form.value.maxFileSize,
         backgroundColor: form.value.backgroundColor,
@@ -301,7 +325,7 @@ async function handleSubmit() {
     }
     router.push('/admin/clients')
   } catch (e: any) {
-    submitError.value = e.response?.data?.error ?? 'Błąd zapisu — sprawdź dane'
+    submitError.value = describeSaveError(e)
   } finally {
     saving.value = false
   }

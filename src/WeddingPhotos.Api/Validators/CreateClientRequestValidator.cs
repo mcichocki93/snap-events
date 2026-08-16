@@ -52,7 +52,8 @@ public class CreateClientRequestValidator : AbstractValidator<CreateClientReques
         // Limits
         RuleFor(x => x.MaxFiles)
             .GreaterThanOrEqualTo(0).WithMessage("Maksymalna liczba plików nie może być ujemna")
-            .LessThanOrEqualTo(10000).WithMessage("Maksymalna liczba plików nie może przekraczać 10000 (użyj 0 dla braku limitu)");
+            .LessThanOrEqualTo(ClientValidationRules.MaxFilesLimit)
+            .WithMessage($"Maksymalna liczba plików nie może przekraczać {ClientValidationRules.MaxFilesLimit} (użyj 0 dla braku limitu)");
 
         RuleFor(x => x.MaxFileSize)
             .GreaterThan(0).WithMessage("Maksymalny rozmiar pliku musi być większy niż 0")
@@ -93,15 +94,11 @@ public class CreateClientRequestValidator : AbstractValidator<CreateClientReques
 
     private bool BeValidEventType(string eventType)
     {
-        return ApplicationConstants.EventTypes.All.Contains(eventType);
+        return ClientValidationRules.IsValidEventType(eventType);
     }
 
     private bool BeValidGoogleDriveInput(string value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        // Bare folder ID: alphanumeric + dash + underscore
-        if (System.Text.RegularExpressions.Regex.IsMatch(value, @"^[a-zA-Z0-9_-]{10,}$")) return true;
-        // Full Google Drive URL
-        return value.Contains("drive.google.com");
+        return ClientValidationRules.IsValidGoogleDriveInput(value);
     }
 }

@@ -204,9 +204,11 @@ public class UpdateClientRequestValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithDateToInPast_ShouldHaveValidationError()
+    public async Task Validate_WithDateToInPast_ShouldBeValid()
     {
         // Arrange
+        // An expired gallery carries a past DateTo and the edit form resends it.
+        // Rejecting that made expired galleries impossible to edit at all.
         var request = new UpdateClientRequest
         {
             DateTo = DateTime.UtcNow.AddDays(-1)
@@ -216,8 +218,7 @@ public class UpdateClientRequestValidatorTests
         var result = await _validator.ValidateAsync(request);
 
         // Assert
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateClientRequest.DateTo));
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -237,12 +238,30 @@ public class UpdateClientRequestValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithZeroMaxFiles_ShouldHaveValidationError()
+    public async Task Validate_WithZeroMaxFiles_ShouldBeValid()
+    {
+        // Arrange
+        // Zero means "no limit" and is what the Standard and Premium packages
+        // store, so it has to survive a round trip through the edit form.
+        var request = new UpdateClientRequest
+        {
+            MaxFiles = 0
+        };
+
+        // Act
+        var result = await _validator.ValidateAsync(request);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithNegativeMaxFiles_ShouldHaveValidationError()
     {
         // Arrange
         var request = new UpdateClientRequest
         {
-            MaxFiles = 0
+            MaxFiles = -1
         };
 
         // Act
@@ -381,9 +400,11 @@ public class UpdateClientRequestValidatorTests
     public async Task Validate_WithInvalidUrl_ShouldHaveValidationError()
     {
         // Arrange
+        // A bare folder ID is accepted here now, same as on create, so the
+        // invalid case needs spaces to be neither an ID nor a URL.
         var request = new UpdateClientRequest
         {
-            GoogleStorageUrl = "not-a-valid-url"
+            GoogleStorageUrl = "definitely not an id"
         };
 
         // Act
@@ -429,7 +450,7 @@ public class UpdateClientRequestValidatorTests
             BackgroundColorSecondary = "#764ba2",
             FontColor = "#ffffff",
             AccentColor = "#3b82f6",
-            GoogleStorageUrl = "https://storage.googleapis.com/bucket/folder"
+            GoogleStorageUrl = "https://drive.google.com/drive/folders/abc123"
         };
 
         // Act
@@ -450,10 +471,8 @@ public class UpdateClientRequestValidatorTests
             Email = "invalid-email", // Invalid format
             Phone = "123", // Too short
             EventType = "InvalidType", // Invalid event type
-            DateTo = DateTime.UtcNow.AddDays(-1), // In the past
-            MaxFiles = 0, // Zero
             BackgroundColor = "not-a-color", // Invalid hex
-            GoogleStorageUrl = "not-a-url" // Invalid URL
+            GoogleStorageUrl = "not-a-url" // Too short for an ID, and not a URL
         };
 
         // Act
@@ -461,6 +480,6 @@ public class UpdateClientRequestValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().HaveCount(8);
+        result.Errors.Should().HaveCount(6);
     }
 }

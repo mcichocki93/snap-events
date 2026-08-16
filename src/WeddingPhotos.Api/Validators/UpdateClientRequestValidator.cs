@@ -36,14 +36,16 @@ public class UpdateClientRequestValidator : AbstractValidator<UpdateClientReques
             .Must(BeValidEventType).WithMessage($"Nieprawidłowy typ wydarzenia. Dozwolone: {string.Join(", ", ApplicationConstants.EventTypes.All)}")
             .When(x => !string.IsNullOrEmpty(x.EventType));
 
-        RuleFor(x => x.DateTo)
-            .GreaterThan(DateTime.UtcNow).WithMessage("Data wygaśnięcia musi być w przyszłości")
-            .When(x => x.DateTo.HasValue);
+        // No "must be in the future" rule here, unlike on create: an expired
+        // gallery has a past DateTo, and the edit form resends it, so requiring
+        // a future date made expired galleries impossible to edit - including
+        // impossible to extend, which is the main reason to edit one.
 
         // Limits
         RuleFor(x => x.MaxFiles)
-            .GreaterThan(0).WithMessage("Maksymalna liczba plików musi być większa niż 0")
-            .LessThanOrEqualTo(10000).WithMessage("Maksymalna liczba plików nie może przekraczać 10000")
+            .GreaterThanOrEqualTo(0).WithMessage("Maksymalna liczba plików nie może być ujemna")
+            .LessThanOrEqualTo(ClientValidationRules.MaxFilesLimit)
+            .WithMessage($"Maksymalna liczba plików nie może przekraczać {ClientValidationRules.MaxFilesLimit} (użyj 0 dla braku limitu)")
             .When(x => x.MaxFiles.HasValue);
 
         RuleFor(x => x.MaxFileSize)
@@ -73,21 +75,15 @@ public class UpdateClientRequestValidator : AbstractValidator<UpdateClientReques
             .When(x => !string.IsNullOrEmpty(x.AccentColor))
             .WithMessage("Kolor akcentu musi być w formacie HEX (np. #3b82f6)");
 
-        // Storage
+        // Storage — accepts bare folder ID or full Google Drive URL, same as create
         RuleFor(x => x.GoogleStorageUrl)
-            .Must(BeValidUrl).WithMessage("Nieprawidłowy format URL storage")
+            .Must(ClientValidationRules.IsValidGoogleDriveInput)
+            .WithMessage("Podaj ID folderu Google Drive lub pełny URL folderu")
             .When(x => !string.IsNullOrEmpty(x.GoogleStorageUrl));
     }
 
     private bool BeValidEventType(string? eventType)
     {
-        return !string.IsNullOrEmpty(eventType) && ApplicationConstants.EventTypes.All.Contains(eventType);
-    }
-
-    private bool BeValidUrl(string? url)
-    {
-        return !string.IsNullOrEmpty(url)
-            && Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
-            && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+        return ClientValidationRules.IsValidEventType(eventType);
     }
 }
