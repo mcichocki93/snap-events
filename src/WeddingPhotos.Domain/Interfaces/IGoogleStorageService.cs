@@ -6,6 +6,11 @@ public interface IGoogleStorageService
 {
     Task<string?> UploadPhotoAsync(Stream fileStream, string fileName, string folderId);
     Task<List<PhotoInfo>> GetPhotosFromFolderAsync(string folderUrl, int page = 1, int pageSize = 100);
+
+    /// <summary>
+    /// Total number of photos in the folder, across all pages.
+    /// </summary>
+    Task<int> GetPhotoCountAsync(string folderUrl);
     /// <param name="thumbnailSize">
     /// When set, serves Drive's thumbnail rendered at roughly this many pixels
     /// on its longest edge instead of the original file. Falls back to the

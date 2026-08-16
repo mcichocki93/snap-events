@@ -100,15 +100,19 @@ public class GalleryService : IGalleryService
                 MimeType = p.MimeType
             }).ToList();
 
-            // TotalCount is the number of photos returned in this page (not the global total,
-            // which is not provided by Google Drive without a separate count query).
-            // HasMore is inferred from whether a full page was returned.
+            // Drive has no count endpoint, so this is a second query. It is worth
+            // it: the gallery shows "loaded of total", and knowing the total also
+            // makes HasMore exact. Inferring it from "was the page full" offered
+            // a Load more button that led to an empty page whenever the total was
+            // an exact multiple of pageSize.
+            var totalCount = await _storageService.GetPhotoCountAsync(client.GoogleStorageUrl);
+
             var response = new GalleryResponse
             {
                 Photos = photoDtos,
-                TotalCount = photoDtos.Count,
-                HasMore = photoDtos.Count == pageSize,
-                NextPageToken = photoDtos.Count == pageSize ? (page + 1).ToString() : null
+                TotalCount = totalCount,
+                HasMore = page * pageSize < totalCount,
+                NextPageToken = page * pageSize < totalCount ? (page + 1).ToString() : null
             };
 
             // Cache the response (15 minutes)

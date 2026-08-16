@@ -132,6 +132,12 @@ public class GalleryServiceTests
             .Setup(x => x.GetPhotosFromFolderAsync(client.GoogleStorageUrl, page, pageSize))
             .ReturnsAsync(photos);
 
+        // TotalCount is the whole folder, not the page: 42 photos exist, this
+        // page holds 1 of them.
+        _mockStorageService
+            .Setup(x => x.GetPhotoCountAsync(client.GoogleStorageUrl))
+            .ReturnsAsync(42);
+
         _mockCacheService
             .Setup(x => x.SetAsync(cacheKey, It.IsAny<GalleryResponse>(), It.IsAny<TimeSpan>()))
             .Returns(Task.CompletedTask);
@@ -144,7 +150,8 @@ public class GalleryServiceTests
         response.Should().NotBeNull();
         response!.Photos.Should().HaveCount(1);
         response.Photos[0].Id.Should().Be("photo1");
-        response.TotalCount.Should().Be(1);
+        response.TotalCount.Should().Be(42);
+        response.HasMore.Should().BeTrue();
         errorMessage.Should().BeNull();
 
         _mockCacheService.Verify(x => x.GetAsync<GalleryResponse>(cacheKey), Times.Once);

@@ -6,10 +6,12 @@ import type { PhotoInfo, ComposableResult } from '../types'
 export interface UseGalleryReturn {
   photos: Ref<PhotoInfo[]>
   loading: Ref<boolean>
+  loadingMore: Ref<boolean>
   error: Ref<string | null>
   hasMore: Ref<boolean>
   isEmpty: ComputedRef<boolean>
   photoCount: ComputedRef<number>
+  totalCount: Ref<number>
   loadPhotos: (reset?: boolean) => Promise<ComposableResult>
   loadMore: () => Promise<void>
   downloadPhoto: (photo: PhotoInfo) => Promise<ComposableResult>
@@ -23,10 +25,15 @@ export function useGallery(guid: string): UseGalleryReturn {
   const { notify } = useNotification()
 
   const photos = ref<PhotoInfo[]>([])
+  // Kept separate from loadingMore on purpose: the view swaps the whole grid for
+  // a full-page spinner while this is true, which on "load more" tore the grid
+  // down, threw the scroll position to the top and re-fetched every image.
   const loading = ref(false)
+  const loadingMore = ref(false)
   const error = ref<string | null>(null)
   const currentPage = ref(1)
   const hasMore = ref(false)
+  const totalCount = ref(0)
 
   /**
    * Map photo with proxy URLs to avoid tracking prevention
@@ -46,7 +53,11 @@ export function useGallery(guid: string): UseGalleryReturn {
       photos.value = []
     }
 
-    loading.value = true
+    if (reset) {
+      loading.value = true
+    } else {
+      loadingMore.value = true
+    }
     error.value = null
 
     try {
@@ -62,6 +73,7 @@ export function useGallery(guid: string): UseGalleryReturn {
       }
 
       hasMore.value = response.hasMore
+      totalCount.value = response.totalCount
 
       return { success: true }
     } catch (err: any) {
@@ -76,6 +88,7 @@ export function useGallery(guid: string): UseGalleryReturn {
       return { success: false, message }
     } finally {
       loading.value = false
+      loadingMore.value = false
     }
   }
 
@@ -83,7 +96,7 @@ export function useGallery(guid: string): UseGalleryReturn {
    * Load more photos (pagination)
    */
   const loadMore = async (): Promise<void> => {
-    if (!hasMore.value || loading.value) return
+    if (!hasMore.value || loading.value || loadingMore.value) return
 
     currentPage.value++
 
@@ -101,11 +114,13 @@ export function useGallery(guid: string): UseGalleryReturn {
     try {
       const proxyUrl = api.getProxyDownloadUrl(photo.id)
 
-      // Create temporary link and trigger download
+      // Create temporary link and trigger download.
+      // Deliberately no target="_blank": the download attribute already hands
+      // the transfer to the browser's download manager, which survives the
+      // screen locking, whereas a new tab is a context mobile browsers discard.
       const link = document.createElement('a')
       link.href = proxyUrl
       link.download = photo.name
-      link.target = '_blank'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -134,10 +149,12 @@ export function useGallery(guid: string): UseGalleryReturn {
     // State
     photos,
     loading,
+    loadingMore,
     error,
     hasMore,
     isEmpty,
     photoCount,
+    totalCount,
 
     // Methods
     loadPhotos,

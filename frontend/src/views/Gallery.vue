@@ -62,28 +62,41 @@
       </div>
 
       <!-- Photo Grid -->
-      <PhotoGrid
-        v-else
-        :photos="photos"
-        :is-empty="isEmpty"
-        :theme-colors="themeColors"
-        @photo-click="openLightbox"
-        @upload="goToUpload"
-      />
-
-      <!-- Load More Button -->
-      <div v-if="hasMore && !loading" class="load-more-container">
-        <button
-          class="btn-secondary"
-          @click="loadMore"
-          :style="{
-            borderColor: themeColors.accent,
-            color: themeColors.accent
-          }"
+      <template v-else>
+        <!-- Photo Counter -->
+        <p
+          v-if="totalCount > 0"
+          class="photo-counter"
+          :style="{ color: themeColors.font }"
         >
-          Załaduj więcej
-        </button>
-      </div>
+          Załadowano {{ photos.length }} z {{ totalCount }} zdjęć
+        </p>
+
+        <PhotoGrid
+          :photos="photos"
+          :is-empty="isEmpty"
+          :theme-colors="themeColors"
+          @photo-click="openLightbox"
+          @upload="goToUpload"
+        />
+
+        <!-- Load More Button -->
+        <!-- Stays mounted while loading: hiding it, or swapping the grid for the
+             full-page spinner, collapsed the page and threw the scroll to the top. -->
+        <div v-if="hasMore" class="load-more-container">
+          <button
+            class="btn-secondary"
+            @click="loadMore"
+            :disabled="loadingMore"
+            :style="{
+              borderColor: themeColors.accent,
+              color: themeColors.accent
+            }"
+          >
+            {{ loadingMore ? 'Ładowanie...' : 'Załaduj więcej' }}
+          </button>
+        </div>
+      </template>
     </div>
 
     <!-- Lightbox -->
@@ -134,9 +147,11 @@ const {
 const {
   photos,
   loading: galleryLoading,
+  loadingMore,
   error: galleryError,
   hasMore,
   isEmpty,
+  totalCount,
   loadPhotos,
   loadMore: loadMorePhotos,
   downloadPhoto
@@ -349,6 +364,14 @@ onMounted(() => {
 
 .btn-secondary:active {
   transform: translateY(0);
+}
+
+/* Photo Counter */
+.photo-counter {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  opacity: 0.7;
+  text-align: right;
 }
 
 /* Load More */

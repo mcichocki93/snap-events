@@ -220,6 +220,40 @@ public class GoogleStorageService : IGoogleStorageService
         }
     }
 
+    public async Task<int> GetPhotoCountAsync(string folderUrl)
+    {
+        try
+        {
+            var folderId = GoogleDriveHelper.ExtractFolderId(folderUrl);
+            var count = 0;
+            string? pageToken = null;
+
+            // Drive has no count endpoint, so we page through asking for the
+            // cheapest possible field. At 1000 rows per call this is a single
+            // request for any realistic gallery.
+            do
+            {
+                var request = _driveService.Files.List();
+                request.Q = $"'{folderId}' in parents and mimeType contains 'image/' and trashed=false";
+                request.Fields = "nextPageToken,files(id)";
+                request.PageSize = 1000;
+                request.PageToken = pageToken;
+
+                var result = await request.ExecuteAsync();
+                count += result.Files?.Count ?? 0;
+                pageToken = result.NextPageToken;
+            }
+            while (!string.IsNullOrEmpty(pageToken));
+
+            return count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to count photos in folder {FolderUrl}", folderUrl);
+            throw;
+        }
+    }
+
     public async Task<(Stream stream, string mimeType, string fileName, long? length)> GetPhotoStreamAsync(
         string photoId,
         int? thumbnailSize = null)
