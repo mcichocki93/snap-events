@@ -16,9 +16,33 @@ public interface IGoogleStorageService
     /// on its longest edge instead of the original file. Falls back to the
     /// original if Drive has not generated a thumbnail yet.
     /// </param>
-    Task<(Stream stream, string mimeType, string fileName, long? length)> GetPhotoStreamAsync(
+    /// <param name="rangeHeader">
+    /// A raw HTTP Range header to forward to storage, letting an interrupted
+    /// download resume. Ignored for thumbnails, which are small enough that
+    /// resuming them is pointless.
+    /// </param>
+    Task<PhotoStreamResult> GetPhotoStreamAsync(
         string photoId,
-        int? thumbnailSize = null);
+        int? thumbnailSize = null,
+        string? rangeHeader = null);
+    /// <summary>
+    /// Opens a Drive resumable upload session and returns its session URL, which
+    /// the browser then writes to directly in chunks.
+    ///
+    /// The file's name and parent folder are fixed here, server-side, so the
+    /// client only ever supplies bytes - it cannot choose where the photo lands
+    /// or what it is called.
+    /// </summary>
+    /// <param name="origin">
+    /// The browser's Origin. Google echoes it onto the session so cross-origin
+    /// chunk uploads are allowed; without it the browser is refused.
+    /// </param>
+    Task<string> CreateResumableUploadSessionAsync(
+        string fileName,
+        long fileSize,
+        string folderId,
+        string? origin);
+
     Task<bool> DeletePhotoAsync(string photoId);
     Task<bool> VerifyFolderExistsAsync(string folderId);
     Task<long> GetFolderSizeAsync(string folderId);

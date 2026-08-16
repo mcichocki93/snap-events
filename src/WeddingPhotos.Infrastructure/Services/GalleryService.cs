@@ -305,20 +305,166 @@ public class GalleryService : IGalleryService
         }
     }
 
-    public async Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, long? Length, string? ErrorMessage)> GetPhotoStreamAsync(
-        string photoId,
-        int? thumbnailSize = null)
+    public async Task<(bool Success, CreateUploadSessionResponse Response, string? ErrorMessage)> CreateUploadSessionAsync(
+        string guid,
+        string fileName,
+        string mimeType,
+        long fileSize,
+        string? origin)
+    {
+        CreateUploadSessionResponse Failure(string message) =>
+            new() { Success = false, Message = message };
+
+        try
+        {
+            var client = await _clientRepository.GetByGuidAsync(guid);
+
+            if (client == null)
+                return (false, Failure(ApplicationConstants.ErrorMessages.GalleryNotFound),
+                    ApplicationConstants.ErrorMessages.GalleryNotFound);
+
+            if (!client.IsActive)
+                return (false, Failure(ApplicationConstants.ErrorMessages.GalleryDeactivated),
+                    ApplicationConstants.ErrorMessages.GalleryDeactivated);
+
+            if (client.DateTo < DateTime.UtcNow)
+                return (false, Failure(ApplicationConstants.ErrorMessages.GalleryExpired),
+                    ApplicationConstants.ErrorMessages.GalleryExpired);
+
+            if (fileSize == 0)
+                return (false, Failure(ApplicationConstants.ErrorMessages.NoFileSelected),
+                    ApplicationConstants.ErrorMessages.NoFileSelected);
+
+            if (!InputValidator.IsValidFileSize(fileSize, client.MaxFileSize))
+            {
+                var maxSizeMB = client.MaxFileSize / (1024 * 1024);
+                var tooBig = string.Format(ApplicationConstants.ErrorMessages.FileTooBig, maxSizeMB);
+                return (false, Failure(tooBig), tooBig);
+            }
+
+            // The type is judged from the declared filename. That is no weaker
+            // than the buffered path: it never inspected the bytes either, and
+            // the stored name is generated server-side regardless.
+            if (!InputValidator.IsValidImageFile(fileName, mimeType))
+                return (false, Failure(ApplicationConstants.ErrorMessages.InvalidFileType),
+                    ApplicationConstants.ErrorMessages.InvalidFileType);
+
+            // Reserved up front so concurrent guests cannot overshoot the quota.
+            // If the guest walks away mid-upload the slot is only returned when
+            // the client calls cancel, so an abandoned session can hold one.
+            var reservedClient = await _clientRepository.TryReserveUploadSlotAsync(guid);
+            if (reservedClient == null)
+            {
+                const string quotaMessage = "Osiągnięto limit zdjęć dla tej galerii";
+                _logger.LogWarning("Upload session rejected - quota exceeded for {Guid}", guid);
+                return (false, Failure(quotaMessage), quotaMessage);
+            }
+
+            try
+            {
+                var folderId = GoogleDriveHelper.ExtractFolderId(client.GoogleStorageUrl);
+
+                var uploadUrl = await _storageService.CreateResumableUploadSessionAsync(
+                    fileName, fileSize, folderId, origin);
+
+                _logger.LogInformation(
+                    "Upload session opened: GUID={Guid}, File={FileName}, Size={Size}MB",
+                    guid, fileName, fileSize / (1024.0 * 1024.0));
+
+                return (true, new CreateUploadSessionResponse
+                {
+                    Success = true,
+                    UploadUrl = uploadUrl
+                }, null);
+            }
+            catch
+            {
+                await _clientRepository.ReleaseUploadSlotAsync(guid);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error opening upload session for {Guid}", guid);
+            return (false, Failure(ApplicationConstants.ErrorMessages.GeneralUploadError),
+                ApplicationConstants.ErrorMessages.GeneralUploadError);
+        }
+    }
+
+    public async Task<(bool Success, UploadPhotoResponse Response, string? ErrorMessage)> CompleteUploadSessionAsync(
+        string guid,
+        string photoId)
     {
         try
         {
-            var (stream, mimeType, fileName, length) =
-                await _storageService.GetPhotoStreamAsync(photoId, thumbnailSize);
-            return (true, stream, mimeType, fileName, length, null);
+            var client = await _clientRepository.GetByGuidAsync(guid);
+
+            if (client == null)
+            {
+                return (false, new UploadPhotoResponse
+                {
+                    Success = false,
+                    Message = ApplicationConstants.ErrorMessages.GalleryNotFound
+                }, ApplicationConstants.ErrorMessages.GalleryNotFound);
+            }
+
+            await _cacheService.RemoveByPrefixAsync($"gallery:{guid}:");
+
+            var remainingUploads = client.MaxFiles == 0
+                ? -1
+                : Math.Max(0, client.MaxFiles - client.UploadedFilesCount);
+
+            _logger.LogInformation(
+                "Direct upload completed: GUID={Guid}, PhotoId={PhotoId}, Remaining={Remaining}",
+                guid, photoId, remainingUploads);
+
+            return (true, new UploadPhotoResponse
+            {
+                Success = true,
+                PhotoId = photoId,
+                Message = ApplicationConstants.SuccessMessages.PhotoUploadedSuccessfully,
+                RemainingUploads = remainingUploads
+            }, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing upload session for {Guid}", guid);
+            return (false, new UploadPhotoResponse
+            {
+                Success = false,
+                Message = ApplicationConstants.ErrorMessages.GeneralUploadError
+            }, ApplicationConstants.ErrorMessages.GeneralUploadError);
+        }
+    }
+
+    public async Task CancelUploadSessionAsync(string guid)
+    {
+        try
+        {
+            await _clientRepository.ReleaseUploadSlotAsync(guid);
+            _logger.LogInformation("Upload session cancelled, slot released: {Guid}", guid);
+        }
+        catch (Exception ex)
+        {
+            // Losing a slot is far better than failing the guest's request here.
+            _logger.LogError(ex, "Failed to release upload slot for {Guid}", guid);
+        }
+    }
+
+    public async Task<(bool Success, PhotoStreamResult? Photo, string? ErrorMessage)> GetPhotoStreamAsync(
+        string photoId,
+        int? thumbnailSize = null,
+        string? rangeHeader = null)
+    {
+        try
+        {
+            var photo = await _storageService.GetPhotoStreamAsync(photoId, thumbnailSize, rangeHeader);
+            return (true, photo, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting photo stream: {PhotoId}", photoId);
-            return (false, null, null, null, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
+            return (false, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
         }
     }
 }

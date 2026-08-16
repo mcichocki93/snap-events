@@ -4,7 +4,9 @@ using Google.Apis.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
@@ -220,6 +222,81 @@ public class GoogleStorageService : IGoogleStorageService
         }
     }
 
+    public async Task<string> CreateResumableUploadSessionAsync(
+        string fileName,
+        long fileSize,
+        string folderId,
+        string? origin)
+    {
+        if (string.IsNullOrWhiteSpace(folderId))
+        {
+            throw new ArgumentException("Folder ID cannot be empty", nameof(folderId));
+        }
+
+        var secureFileName = GenerateSecureFileName(Path.GetExtension(fileName));
+
+        if (!IsAllowedFileType(secureFileName))
+        {
+            throw new ArgumentException(
+                $"File type not allowed: {Path.GetExtension(secureFileName)}");
+        }
+
+        var fileMetaData = new Google.Apis.Drive.v3.Data.File
+        {
+            Name = secureFileName,
+            Parents = new List<string> { folderId },
+            Description = $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC"
+        };
+
+        var metadataJson = JsonConvert.SerializeObject(
+            fileMetaData,
+            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id");
+
+        request.Content = new StringContent(metadataJson, Encoding.UTF8, "application/json");
+        request.Headers.TryAddWithoutValidation("X-Upload-Content-Type", GetMimeType(secureFileName));
+        request.Headers.TryAddWithoutValidation("X-Upload-Content-Length", fileSize.ToString());
+
+        // Google decides at this point whether the resulting session may be
+        // written to from a browser, based on the Origin it sees here.
+        if (!string.IsNullOrEmpty(origin))
+        {
+            request.Headers.TryAddWithoutValidation("Origin", origin);
+        }
+
+        // _driveService.HttpClient carries the service account credentials, so
+        // the session is authorised here and the browser never sees a token.
+        using var response = await _driveService.HttpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "Failed to open resumable session: {StatusCode} {Body}",
+                (int)response.StatusCode, body);
+
+            throw new HttpRequestException(
+                $"Drive refused a resumable upload session ({(int)response.StatusCode})");
+        }
+
+        var sessionUrl = response.Headers.Location?.ToString();
+
+        if (string.IsNullOrEmpty(sessionUrl))
+        {
+            throw new InvalidOperationException(
+                "Drive accepted the resumable session but returned no Location header");
+        }
+
+        _logger.LogInformation(
+            "Opened resumable upload session for {FileName} in folder {FolderId}",
+            secureFileName, folderId);
+
+        return sessionUrl;
+    }
+
     public async Task<int> GetPhotoCountAsync(string folderUrl)
     {
         try
@@ -254,9 +331,10 @@ public class GoogleStorageService : IGoogleStorageService
         }
     }
 
-    public async Task<(Stream stream, string mimeType, string fileName, long? length)> GetPhotoStreamAsync(
+    public async Task<PhotoStreamResult> GetPhotoStreamAsync(
         string photoId,
-        int? thumbnailSize = null)
+        int? thumbnailSize = null,
+        string? rangeHeader = null)
     {
         var metaRequest = _driveService.Files.Get(photoId);
         metaRequest.Fields = thumbnailSize.HasValue
@@ -274,9 +352,15 @@ public class GoogleStorageService : IGoogleStorageService
 
             if (thumbnail != null)
             {
-                // Deliberately not fileMeta.Size - that is the original's size,
-                // which would be wildly wrong for a thumbnail.
-                return (thumbnail.Value.stream, thumbnail.Value.mimeType, fileName, thumbnail.Value.length);
+                return new PhotoStreamResult
+                {
+                    Stream = thumbnail.Value.stream,
+                    MimeType = thumbnail.Value.mimeType,
+                    FileName = fileName,
+                    // Deliberately not fileMeta.Size - that is the original's
+                    // size, which would be wildly wrong for a thumbnail.
+                    Length = thumbnail.Value.length
+                };
             }
         }
 
@@ -290,8 +374,19 @@ public class GoogleStorageService : IGoogleStorageService
         var downloadRequest = _driveService.Files.Get(photoId);
         downloadRequest.Alt = DriveBaseServiceRequest<Google.Apis.Drive.v3.Data.File>.AltEnum.Media;
 
+        var httpRequest = downloadRequest.CreateRequest();
+
+        // Forward the browser's Range header verbatim. Drive honours it, so an
+        // interrupted download resumes from where it stopped instead of pulling
+        // the whole photo again - which is what a phone locking mid-download
+        // used to cost.
+        if (!string.IsNullOrEmpty(rangeHeader))
+        {
+            httpRequest.Headers.TryAddWithoutValidation("Range", rangeHeader);
+        }
+
         var response = await _driveService.HttpClient.SendAsync(
-            downloadRequest.CreateRequest(),
+            httpRequest,
             HttpCompletionOption.ResponseHeadersRead);
 
         // Deleted photos 404 routinely, so release the connection before
@@ -312,7 +407,20 @@ public class GoogleStorageService : IGoogleStorageService
         // size; they agree for images, but the header describes this response.
         var length = response.Content.Headers.ContentLength ?? fileMeta.Size;
 
-        return (stream, mimeType, fileName, length);
+        // Only treat this as partial if Drive actually honoured the range; it
+        // answers 200 with the whole file when it does not.
+        var contentRange = response.StatusCode == HttpStatusCode.PartialContent
+            ? response.Content.Headers.ContentRange?.ToString()
+            : null;
+
+        return new PhotoStreamResult
+        {
+            Stream = stream,
+            MimeType = mimeType,
+            FileName = fileName,
+            Length = length,
+            ContentRange = contentRange
+        };
     }
 
     /// <summary>

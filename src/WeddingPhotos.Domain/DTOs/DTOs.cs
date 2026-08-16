@@ -125,3 +125,38 @@ public class UpdateClientRequest
     // STORAGE
     public string? GoogleStorageUrl { get; set; }
 }
+/// <summary>
+/// Asks the API to open a resumable upload session. The browser then writes the
+/// bytes straight to Drive, so a locked phone resumes where it stopped instead
+/// of starting the photo again - and the photos never pass through our server.
+/// </summary>
+public class CreateUploadSessionRequest
+{
+    public string FileName { get; set; } = string.Empty;
+
+    public string MimeType { get; set; } = string.Empty;
+
+    public long Size { get; set; }
+}
+
+public class CreateUploadSessionResponse
+{
+    public bool Success { get; set; }
+
+    /// <summary>
+    /// Where the browser PUTs its chunks. Grants write access to this one
+    /// pending file only, and Drive expires it after about a week.
+    /// </summary>
+    public string? UploadUrl { get; set; }
+
+    public string? Message { get; set; }
+}
+
+/// <summary>
+/// Confirms a direct-to-Drive upload finished, so the gallery cache can be
+/// dropped and the reserved quota slot kept.
+/// </summary>
+public class CompleteUploadRequest
+{
+    public string PhotoId { get; set; } = string.Empty;
+}

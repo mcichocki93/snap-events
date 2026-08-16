@@ -1,6 +1,7 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { useNotification } from './useNotification'
 import { useWakeLock } from './useWakeLock'
+import { uploadFileResumable, DirectUploadUnavailableError } from './useResumableUpload'
 import api from '../services/api'
 import type { Client, FileUpload, ComposableResult } from '../types'
 
@@ -39,6 +40,10 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   const uploading = ref(false)
   const uploadedCount = ref(0)
 
+  // Flipped off for the rest of the session the first time the direct-to-Drive
+  // route proves unreachable, so we do not pay that discovery cost per photo.
+  let directUploadAvailable = true
+
   /**
    * A rejection is worth retrying only when the server never made a decision.
    * Anything it answered - wrong file type, quota exhausted, rate limited -
@@ -76,9 +81,36 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   }
 
   /**
-   * Uploads one file, aborting it if the transfer stops making progress.
+   * Uploads one file, preferring the resumable path straight to Drive so an
+   * interruption costs only the current chunk. Falls back to the buffered
+   * endpoint when that route is unavailable - an old browser, or a network that
+   * blocks Google's upload host.
    */
   const uploadOne = async (fileObj: FileUpload): Promise<void> => {
+    if (directUploadAvailable) {
+      try {
+        await uploadFileResumable(guid, fileObj.file, (percent) => {
+          fileObj.progress = percent
+        })
+        return
+      } catch (error) {
+        if (!(error instanceof DirectUploadUnavailableError)) throw error
+
+        // Stop trying for the rest of the batch; one failure to reach the
+        // session route means the others will not fare better.
+        directUploadAvailable = false
+        fileObj.progress = 0
+      }
+    }
+
+    await uploadViaServer(fileObj)
+  }
+
+  /**
+   * The original path: one whole multipart POST through our API. Kept as a
+   * fallback, and still guarded against stalls.
+   */
+  const uploadViaServer = async (fileObj: FileUpload): Promise<void> => {
     const controller = new AbortController()
     let stallTimer: ReturnType<typeof setTimeout>
 

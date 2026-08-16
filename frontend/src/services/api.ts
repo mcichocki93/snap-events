@@ -99,6 +99,40 @@ export default {
   },
 
   /**
+   * Open a resumable upload session. The browser then writes chunks straight to
+   * Drive, so an interrupted transfer resumes rather than restarting.
+   */
+  async createUploadSession(
+    guid: string,
+    file: File
+  ): Promise<{ success: boolean; uploadUrl?: string | null; message?: string }> {
+    const response = await apiClient.post(`/photo/upload-session/${guid}`, {
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size
+    })
+    return response.data
+  },
+
+  /**
+   * Confirm a direct upload landed, so the gallery cache is refreshed.
+   */
+  async completeUploadSession(guid: string, photoId: string): Promise<UploadPhotoResponse> {
+    const response = await apiClient.post<UploadPhotoResponse>(
+      `/photo/upload-session/${guid}/complete`,
+      { photoId }
+    )
+    return response.data
+  },
+
+  /**
+   * Give back the quota slot reserved for an upload that was abandoned.
+   */
+  async cancelUploadSession(guid: string): Promise<void> {
+    await apiClient.post(`/photo/upload-session/${guid}/cancel`)
+  },
+
+  /**
    * Get the proxied download URL for a photo (avoids tracking prevention)
    */
   getDownloadUrl(photoId: string): string {

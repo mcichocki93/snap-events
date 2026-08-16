@@ -160,6 +160,90 @@ public class PhotoController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Opens a resumable upload session. The browser writes chunks straight to
+    /// Drive from here, so a transfer cut short by the screen locking picks up
+    /// where it stopped, and photo bytes never travel through this server.
+    /// </summary>
+    [HttpPost("upload-session/{guid}")]
+    [ProducesResponseType(typeof(CreateUploadSessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CreateUploadSessionResponse>> CreateUploadSession(
+        string guid,
+        [FromBody] CreateUploadSessionRequest request)
+    {
+        if (!InputValidator.IsValidGuid(guid) || InputValidator.ContainsSuspiciousPatterns(guid))
+        {
+            _logger.LogWarning(
+                "Upload session attempt with invalid GUID from {IP}: {Guid}",
+                HttpContext.Connection.RemoteIpAddress, guid);
+
+            return BadRequest(new CreateUploadSessionResponse
+            {
+                Success = false,
+                Message = ApplicationConstants.ErrorMessages.InvalidGuidFormat
+            });
+        }
+
+        var (success, response, _) = await _galleryService.CreateUploadSessionAsync(
+            guid,
+            request.FileName,
+            request.MimeType,
+            request.Size,
+            Request.Headers.Origin.ToString());
+
+        return success ? Ok(response) : BadRequest(response);
+    }
+
+    /// <summary>
+    /// Confirms the browser finished writing to a session, so the gallery cache
+    /// is dropped and the reserved quota slot stands.
+    /// </summary>
+    [HttpPost("upload-session/{guid}/complete")]
+    [ProducesResponseType(typeof(UploadPhotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UploadPhotoResponse>> CompleteUploadSession(
+        string guid,
+        [FromBody] CompleteUploadRequest request)
+    {
+        if (!InputValidator.IsValidGuid(guid) || InputValidator.ContainsSuspiciousPatterns(guid))
+        {
+            return BadRequest(new UploadPhotoResponse
+            {
+                Success = false,
+                Message = ApplicationConstants.ErrorMessages.InvalidGuidFormat
+            });
+        }
+
+        if (!InputValidator.IsValidGuid(request.PhotoId))
+        {
+            return BadRequest(new UploadPhotoResponse
+            {
+                Success = false,
+                Message = ApplicationConstants.ErrorMessages.InvalidIdentifier
+            });
+        }
+
+        var (success, response, _) = await _galleryService.CompleteUploadSessionAsync(guid, request.PhotoId);
+
+        return success ? Ok(response) : BadRequest(response);
+    }
+
+    /// <summary>
+    /// Gives back the quota slot reserved for an upload the guest abandoned.
+    /// </summary>
+    [HttpPost("upload-session/{guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<ActionResult> CancelUploadSession(string guid)
+    {
+        if (!InputValidator.IsValidGuid(guid) || InputValidator.ContainsSuspiciousPatterns(guid))
+            return BadRequest();
+
+        await _galleryService.CancelUploadSessionAsync(guid);
+
+        return NoContent();
+    }
+
     [HttpGet("proxy/{photoId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -182,20 +266,20 @@ public class PhotoController : ControllerBase
                 ? GridThumbnailPixels
                 : null;
 
-            var (success, stream, mimeType, _, length, errorMessage) =
+            var (success, photo, errorMessage) =
                 await _galleryService.GetPhotoStreamAsync(photoId, thumbnailSize);
 
-            if (!success || stream == null)
+            if (!success || photo == null)
                 return NotFound(new { message = errorMessage });
 
             Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
 
             // The stream is not seekable, so nothing downstream can work the
             // length out on its own - without this the response goes out chunked.
-            if (length.HasValue)
-                Response.ContentLength = length.Value;
+            if (photo.Length.HasValue)
+                Response.ContentLength = photo.Length.Value;
 
-            return File(stream, mimeType ?? "image/jpeg");
+            return File(photo.Stream, photo.MimeType);
         }
         catch (Exception ex)
         {
@@ -214,22 +298,36 @@ public class PhotoController : ControllerBase
             if (!InputValidator.IsValidGuid(photoId))
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
 
-            var (success, stream, mimeType, fileName, length, errorMessage) =
-                await _galleryService.GetPhotoStreamAsync(photoId);
+            // Forward the browser's Range header so its download manager can
+            // resume a transfer that the screen locking cut short, instead of
+            // starting the photo over.
+            var rangeHeader = Request.Headers.Range.ToString();
 
-            if (!success || stream == null)
+            var (success, photo, errorMessage) =
+                await _galleryService.GetPhotoStreamAsync(photoId, rangeHeader: rangeHeader);
+
+            if (!success || photo == null)
                 return NotFound(new { message = errorMessage });
 
-            var safeFileName = InputValidator.SanitizeFileName(fileName ?? $"photo_{photoId}.jpg");
+            var safeFileName = InputValidator.SanitizeFileName(photo.FileName);
 
             _logger.LogInformation("Photo download: {PhotoId}, IP: {IP}",
                 photoId, HttpContext.Connection.RemoteIpAddress);
 
-            // Lets the browser show a real progress bar while downloading.
-            if (length.HasValue)
-                Response.ContentLength = length.Value;
+            // Advertised even on a full response, so the browser knows it may
+            // ask for a range if this one gets interrupted.
+            Response.Headers.AcceptRanges = "bytes";
 
-            return File(stream, mimeType ?? "application/octet-stream", safeFileName);
+            if (photo.Length.HasValue)
+                Response.ContentLength = photo.Length.Value;
+
+            if (photo.IsPartial)
+            {
+                Response.Headers.ContentRange = photo.ContentRange;
+                Response.StatusCode = StatusCodes.Status206PartialContent;
+            }
+
+            return File(photo.Stream, photo.MimeType, safeFileName);
         }
         catch (Exception ex)
         {

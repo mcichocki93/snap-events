@@ -160,6 +160,11 @@ try
             new RateLimitRule { Endpoint = "*", Period = "1m", Limit = 60 },
             new RateLimitRule { Endpoint = "*/admin/login", Period = "5m", Limit = 10 }, // Anti-brute-force on admin login
             new RateLimitRule { Endpoint = "*/photo/upload/*", Period = "1h", Limit = 100 },
+            // Direct-to-Drive uploads cost two lightweight calls per photo (open
+            // the session, confirm it) and carry no photo bytes, so the ceiling
+            // is higher than the buffered path - 100/h would have stopped a
+            // 150-photo Starter gallery halfway.
+            new RateLimitRule { Endpoint = "*/photo/upload-session/*", Period = "1h", Limit = 400 },
             new RateLimitRule { Endpoint = "*/photo/gallery/*", Period = "1m", Limit = 30 },
             new RateLimitRule { Endpoint = "*/photo/proxy/*", Period = "1m", Limit = 100 },
             new RateLimitRule { Endpoint = "*/contact", Period = "1h", Limit = 5 } // Contact form: 5 per hour (anti-spam)
