@@ -9,6 +9,8 @@ const CHUNK_STALL_TIMEOUT_MS = 45_000
 
 const MAX_CHUNK_ATTEMPTS = 5
 
+const MAX_SESSION_ATTEMPTS = 4
+
 export class DirectUploadUnavailableError extends Error {}
 
 /**
@@ -39,6 +41,35 @@ function waitUntilConnected(): Promise<void> {
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+let disarmUnloadRelease: (() => void) | null = null
+
+/**
+ * While a session is open, arrange for its quota slot to be handed back if the
+ * page is destroyed mid-upload.
+ *
+ * A phone discarding a backgrounded tab kills any in-flight request, so the
+ * ordinary cancel call never leaves the device and the gallery silently loses a
+ * photo from its allowance. sendBeacon is the one request that survives.
+ */
+function armUnloadRelease(guid: string): void {
+  releaseUnloadHandler()
+
+  const handler = (event: PageTransitionEvent) => {
+    // persisted means the page is only going into the back/forward cache and
+    // may well come back to finish the upload.
+    if (event.persisted) return
+    navigator.sendBeacon?.(api.getCancelUploadUrl(guid))
+  }
+
+  window.addEventListener('pagehide', handler)
+  disarmUnloadRelease = () => window.removeEventListener('pagehide', handler)
+}
+
+function releaseUnloadHandler(): void {
+  disarmUnloadRelease?.()
+  disarmUnloadRelease = null
 }
 
 /**
@@ -118,6 +149,46 @@ async function queryReceivedBytes(url: string, totalSize: number): Promise<numbe
 }
 
 /**
+ * Opens an upload session, distinguishing "this route does not work here" from
+ * "we currently have no network".
+ *
+ * Getting this wrong is expensive: treating a backgrounded phone's failed
+ * request as proof the route is unsupported permanently drops the whole batch
+ * onto the buffered endpoint, which cannot resume - so one moment offline used
+ * to cost every remaining photo.
+ */
+async function openSession(
+  guid: string,
+  file: File
+): Promise<{ uploadUrl?: string | null }> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await api.createUploadSession(guid, file)
+    } catch (error: any) {
+      const status = error?.response?.status
+
+      // The server answered and made a decision - quota spent, gallery
+      // expired, file rejected. Surface it; retrying changes nothing.
+      if (error?.response?.data?.message) throw error
+
+      // The route genuinely is not there. This is the real fallback case.
+      if (status === 404 || status === 405 || status === 501) {
+        throw new DirectUploadUnavailableError(`Upload session endpoint answered ${status}`)
+      }
+
+      if (attempt >= MAX_SESSION_ATTEMPTS) {
+        throw new Error('Could not open an upload session')
+      }
+
+      // No response at all: almost always a sleeping radio or a backgrounded
+      // page. Wait for the page to come back and try again.
+      await waitUntilConnected()
+      await delay(Math.min(1000 * 2 ** (attempt - 1), 4000))
+    }
+  }
+}
+
+/**
  * Uploads a file straight to Drive in chunks, resuming across interruptions.
  *
  * @returns the new Drive file ID
@@ -127,21 +198,28 @@ export async function uploadFileResumable(
   file: File,
   onProgress: (percent: number) => void
 ): Promise<string> {
-  let session: { uploadUrl?: string | null }
-
-  try {
-    session = await api.createUploadSession(guid, file)
-  } catch (error: any) {
-    // A rejection carrying a server message is a real decision - quota spent,
-    // gallery expired - and must surface. Anything else means we could not ask,
-    // so the caller should fall back to the buffered endpoint.
-    if (error?.response?.data?.message) throw error
-    throw new DirectUploadUnavailableError('Could not open an upload session')
-  }
+  const session = await openSession(guid, file)
 
   const uploadUrl = session.uploadUrl
   if (!uploadUrl) throw new DirectUploadUnavailableError('No upload session URL returned')
 
+  // The session now holds a quota slot; make sure it comes back even if the
+  // page is destroyed before this finishes.
+  armUnloadRelease(guid)
+
+  try {
+    return await sendChunks(guid, file, uploadUrl, onProgress)
+  } finally {
+    releaseUnloadHandler()
+  }
+}
+
+async function sendChunks(
+  guid: string,
+  file: File,
+  uploadUrl: string,
+  onProgress: (percent: number) => void
+): Promise<string> {
   let offset = 0
   let attempts = 0
 

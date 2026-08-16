@@ -133,6 +133,15 @@ export default {
   },
 
   /**
+   * Same endpoint as an absolute URL, for sendBeacon - the only way to release
+   * a slot while the page is being torn down, since a normal request would be
+   * cancelled with it.
+   */
+  getCancelUploadUrl(guid: string): string {
+    return `${API_BASE_URL}/photo/upload-session/${guid}/cancel`
+  },
+
+  /**
    * Get the proxied download URL for a photo (avoids tracking prevention)
    */
   getDownloadUrl(photoId: string): string {
