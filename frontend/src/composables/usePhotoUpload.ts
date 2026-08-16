@@ -1,7 +1,17 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { useNotification } from './useNotification'
+import { useWakeLock } from './useWakeLock'
 import api from '../services/api'
 import type { Client, FileUpload, ComposableResult } from '../types'
+
+// Abort a file if no bytes move for this long. There is deliberately no overall
+// timeout - a 20MB photo over a weak signal is slow but fine; a transfer that
+// has stopped moving because the phone slept is not.
+const STALL_TIMEOUT_MS = 60_000
+
+// One initial try plus two retries. Kept low because /photo/upload is rate
+// limited to 100 requests per hour per IP.
+const MAX_ATTEMPTS = 3
 
 export interface UsePhotoUploadReturn {
   selectedFiles: Ref<FileUpload[]>
@@ -23,10 +33,81 @@ export interface UsePhotoUploadReturn {
  */
 export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): UsePhotoUploadReturn {
   const { notify } = useNotification()
+  const wakeLock = useWakeLock()
 
   const selectedFiles = ref<FileUpload[]>([])
   const uploading = ref(false)
   const uploadedCount = ref(0)
+
+  /**
+   * A rejection is worth retrying only when the server never made a decision.
+   * Anything it answered - wrong file type, quota exhausted, rate limited -
+   * would be rejected identically next time.
+   */
+  const isRetryable = (error: any): boolean => {
+    const status = error?.response?.status
+    if (status === undefined) return true // network error, abort, or stall
+    return status >= 500
+  }
+
+  /**
+   * Waits until the page is back in the foreground and the device is online.
+   * This is what makes a locked phone recoverable: the retry parks here until
+   * the guest unlocks, then carries on instead of failing while nothing can
+   * possibly succeed.
+   */
+  const waitUntilConnected = (): Promise<void> => {
+    if (navigator.onLine !== false && document.visibilityState === 'visible') {
+      return Promise.resolve()
+    }
+
+    return new Promise(resolve => {
+      const check = () => {
+        if (navigator.onLine !== false && document.visibilityState === 'visible') {
+          window.removeEventListener('online', check)
+          document.removeEventListener('visibilitychange', check)
+          resolve()
+        }
+      }
+
+      window.addEventListener('online', check)
+      document.addEventListener('visibilitychange', check)
+    })
+  }
+
+  /**
+   * Uploads one file, aborting it if the transfer stops making progress.
+   */
+  const uploadOne = async (fileObj: FileUpload): Promise<void> => {
+    const controller = new AbortController()
+    let stallTimer: ReturnType<typeof setTimeout>
+
+    const restartStallTimer = () => {
+      clearTimeout(stallTimer)
+      stallTimer = setTimeout(() => controller.abort(), STALL_TIMEOUT_MS)
+    }
+
+    restartStallTimer()
+
+    try {
+      await api.uploadPhoto(
+        guid,
+        fileObj.file,
+        (progressEvent) => {
+          restartStallTimer()
+
+          if (progressEvent.total) {
+            fileObj.progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            )
+          }
+        },
+        controller.signal
+      )
+    } finally {
+      clearTimeout(stallTimer!)
+    }
+  }
 
   /**
    * Format file size to human readable format
@@ -144,47 +225,60 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     uploading.value = true
     uploadedCount.value = 0
 
-    for (let i = 0; i < selectedFiles.value.length; i++) {
-      const fileObj = selectedFiles.value[i]
+    // Hold the screen awake for the whole batch, not per file, so the phone
+    // cannot lock in the gap between two photos.
+    await wakeLock.acquire()
 
-      if (fileObj.uploaded) continue
+    try {
+      for (let i = 0; i < selectedFiles.value.length; i++) {
+        const fileObj = selectedFiles.value[i]
 
-      fileObj.uploading = true
-      fileObj.error = false
+        if (fileObj.uploaded) continue
 
-      try {
-        await api.uploadPhoto(
-          guid,
-          fileObj.file,
-          (progressEvent) => {
-            if (progressEvent.total) {
-              fileObj.progress = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              )
+        fileObj.uploading = true
+        fileObj.error = false
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            await uploadOne(fileObj)
+
+            fileObj.uploaded = true
+            fileObj.uploading = false
+            uploadedCount.value++
+
+            notify({
+              type: 'positive',
+              message: `Przesłano: ${fileObj.name}`
+            })
+            break
+          } catch (error) {
+            const canRetry = attempt < MAX_ATTEMPTS && isRetryable(error)
+
+            if (!canRetry) {
+              fileObj.error = true
+              fileObj.uploading = false
+              fileObj.progress = 0
+
+              notify({
+                type: 'negative',
+                message: `Błąd przesyłania: ${fileObj.name}`
+              })
+              break
             }
+
+            // Park until there is a working connection again, then start this
+            // file over. Restarting is the only option - the API takes a photo
+            // as one whole request, so a partial transfer cannot be resumed.
+            fileObj.progress = 0
+            await waitUntilConnected()
+            await wakeLock.acquire()
           }
-        )
-
-        fileObj.uploaded = true
-        fileObj.uploading = false
-        uploadedCount.value++
-
-        notify({
-          type: 'positive',
-          message: `Przesłano: ${fileObj.name}`
-        })
-      } catch (error) {
-        fileObj.error = true
-        fileObj.uploading = false
-
-        notify({
-          type: 'negative',
-          message: `Błąd przesyłania: ${fileObj.name}`
-        })
+        }
       }
+    } finally {
+      uploading.value = false
+      await wakeLock.release()
     }
-
-    uploading.value = false
 
     if (uploadedCount.value > 0) {
       notify({

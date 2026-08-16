@@ -77,9 +77,10 @@ export default {
    * Upload a photo
    */
   async uploadPhoto(
-    guid: string, 
-    file: File, 
-    onProgress?: (progress: AxiosProgressEvent) => void
+    guid: string,
+    file: File,
+    onProgress?: (progress: AxiosProgressEvent) => void,
+    signal?: AbortSignal
   ): Promise<UploadPhotoResponse> {
     const formData = new FormData()
     formData.append('file', file)
@@ -88,7 +89,10 @@ export default {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: onProgress
+      onUploadProgress: onProgress,
+      // No timeout: a large photo on a slow connection is legitimately slow.
+      // The caller aborts via this signal when transfer actually stalls.
+      signal
     })
 
     return response.data
