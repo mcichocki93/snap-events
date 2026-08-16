@@ -14,15 +14,23 @@ const STALL_TIMEOUT_MS = 60_000
 // limited to 100 requests per hour per IP.
 const MAX_ATTEMPTS = 3
 
+export interface UploadBatchResult {
+  uploaded: number
+  failed: number
+  at: number
+}
+
 export interface UsePhotoUploadReturn {
   selectedFiles: Ref<FileUpload[]>
   uploading: Ref<boolean>
   uploadedCount: Ref<number>
+  lastBatch: Ref<UploadBatchResult | null>
   hasFiles: ComputedRef<boolean>
   canUpload: ComputedRef<boolean>
   addFiles: (files: FileList | File[]) => void
   removeFile: (index: number) => void
   uploadFiles: () => Promise<ComposableResult<{ count: number }>>
+  startNewBatch: () => void
   clearFiles: () => void
   formatFileSize: (bytes: number) => string
 }
@@ -43,6 +51,39 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   // Flipped off for the rest of the session the first time the direct-to-Drive
   // route proves unreachable, so we do not pay that discovery cost per photo.
   let directUploadAvailable = true
+
+  // Result of the most recent batch, kept on screen until the guest dismisses
+  // it. Mirrored into sessionStorage so it survives the page being reloaded or
+  // discarded while backgrounded - the exact case where the guest most needs
+  // telling that their photos arrived.
+  const lastBatch = ref<UploadBatchResult | null>(null)
+  const batchStorageKey = `snapevents:lastUpload:${guid}`
+
+  const recordBatch = (uploaded: number, failed: number): void => {
+    const result: UploadBatchResult = { uploaded, failed, at: Date.now() }
+    lastBatch.value = result
+
+    try {
+      sessionStorage.setItem(batchStorageKey, JSON.stringify(result))
+    } catch {
+      // Storage unavailable (private mode); the on-screen summary still works.
+    }
+  }
+
+  const restoreLastBatch = (): void => {
+    try {
+      const stored = sessionStorage.getItem(batchStorageKey)
+      if (!stored) return
+
+      const result = JSON.parse(stored) as UploadBatchResult
+      // Anything older than an hour is a previous visit, not this one.
+      if (Date.now() - result.at < 60 * 60 * 1000) lastBatch.value = result
+    } catch {
+      // Corrupt or unavailable; start without a summary.
+    }
+  }
+
+  restoreLastBatch()
 
   /**
    * A rejection is worth retrying only when the server never made a decision.
@@ -312,22 +353,33 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       await wakeLock.release()
     }
 
+    // Deliberately not cleared on a timer, and deliberately not a toast. A
+    // batch often finishes while the guest is looking at something else, and
+    // the old timed toast plus the two-second list wipe meant they came back to
+    // a blank screen and concluded nothing had been sent.
+    recordBatch(uploadedCount.value, selectedFiles.value.filter(f => f.error).length)
+
     if (uploadedCount.value > 0) {
-      notify({
-        type: 'positive',
-        message: `Pomyślnie przesłano ${uploadedCount.value} zdjęć!`,
-        timeout: 5000
-      })
-
-      // Clear uploaded files after delay
-      setTimeout(() => {
-        selectedFiles.value = selectedFiles.value.filter(f => !f.uploaded)
-      }, 2000)
-
       return { success: true, data: { count: uploadedCount.value } }
     }
 
     return { success: false, message: 'Nie udało się przesłać żadnego pliku' }
+  }
+
+  /**
+   * Drops the files already sent and the summary, leaving a clean screen for
+   * the next batch. Called when the guest chooses to send more.
+   */
+  const startNewBatch = (): void => {
+    selectedFiles.value = selectedFiles.value.filter(f => !f.uploaded)
+    uploadedCount.value = 0
+    lastBatch.value = null
+
+    try {
+      sessionStorage.removeItem(batchStorageKey)
+    } catch {
+      // Storage unavailable (private mode); the in-memory state is enough.
+    }
   }
 
   /**
@@ -353,6 +405,7 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     selectedFiles,
     uploading,
     uploadedCount,
+    lastBatch,
     hasFiles,
     canUpload,
 
@@ -360,6 +413,7 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     addFiles,
     removeFile,
     uploadFiles,
+    startNewBatch,
     clearFiles,
     formatFileSize
   }

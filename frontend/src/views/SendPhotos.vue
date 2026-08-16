@@ -10,6 +10,16 @@
         :theme-colors="themeColors"
       />
 
+      <!-- Result of the last batch — sits above everything so it is the first
+           thing seen when coming back to a finished upload -->
+      <UploadSummary
+        v-if="lastBatch"
+        :result="lastBatch"
+        :theme-colors="themeColors"
+        @gallery="goToGallery"
+        @new-batch="startNewBatch"
+      />
+
       <!-- Info Card -->
       <UploadInfoCard
         v-if="client"
@@ -55,17 +65,6 @@
       />
     </div>
 
-    <!-- Success Toast -->
-    <Transition name="toast">
-      <div v-if="showSuccessToast" class="toast success">
-        <div class="toast-icon">✓</div>
-        <div class="toast-content">
-          <h4 class="toast-title">Sukces!</h4>
-          <p class="toast-message">{{ successMessage }}</p>
-        </div>
-      </div>
-    </Transition>
-
     <!-- Error Toast -->
     <Transition name="toast">
       <div v-if="showErrorToast" class="toast error">
@@ -90,6 +89,7 @@ import AOS from 'aos'
 import UploadHeader from '../components/upload/UploadHeader.vue'
 import UploadInfoCard from '../components/upload/UploadInfoCard.vue'
 import UploadArea from '../components/upload/UploadArea.vue'
+import UploadSummary from '../components/upload/UploadSummary.vue'
 import FileList from '../components/upload/FileList.vue'
 import UploadActions from '../components/upload/UploadActions.vue'
 
@@ -110,16 +110,16 @@ const {
   selectedFiles,
   uploading,
   canUpload,
+  lastBatch,
   addFiles,
   removeFile,
-  uploadFiles: uploadFilesComposable
+  uploadFiles: uploadFilesComposable,
+  startNewBatch
 } = usePhotoUpload(guid, client)
 
 // Local state
 const fileInput = ref(null)
-const showSuccessToast = ref(false)
 const showErrorToast = ref(false)
-const successMessage = ref('')
 const errorMessage = ref('')
 
 // Computed
@@ -150,13 +150,10 @@ const handleFilesDropped = (files) => {
 const uploadFiles = async () => {
   const result = await uploadFilesComposable()
 
-  if (result.success) {
-    successMessage.value = `Pomyślnie przesłano ${result.data?.count ?? 0} zdjęć!`
-    showSuccessToast.value = true
-    setTimeout(() => {
-      showSuccessToast.value = false
-    }, 5000)
-  } else {
+  // Success is reported by the summary panel, which stays put. Only the
+  // "nothing got through" case still needs a toast, and even that is backed by
+  // the summary underneath it.
+  if (!result.success) {
     errorMessage.value = result.message || 'Nie udało się przesłać zdjęć'
     showErrorToast.value = true
     setTimeout(() => {
@@ -240,10 +237,6 @@ onMounted(async () => {
   z-index: 9999;
   max-width: 400px;
   color: white;
-}
-
-.toast.success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 .toast.error {
