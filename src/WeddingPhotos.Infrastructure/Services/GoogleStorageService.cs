@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
 using WeddingPhotos.Domain.Validation;
@@ -219,21 +220,115 @@ public class GoogleStorageService : IGoogleStorageService
         }
     }
 
-    public async Task<(Stream stream, string mimeType, string fileName)> GetPhotoStreamAsync(string photoId)
+    public async Task<(Stream stream, string mimeType, string fileName, long? length)> GetPhotoStreamAsync(
+        string photoId,
+        int? thumbnailSize = null)
     {
         var metaRequest = _driveService.Files.Get(photoId);
-        metaRequest.Fields = "id,name,mimeType";
+        metaRequest.Fields = thumbnailSize.HasValue
+            ? "id,name,mimeType,size,thumbnailLink"
+            : "id,name,mimeType,size";
         var fileMeta = await metaRequest.ExecuteAsync();
 
         var mimeType = fileMeta.MimeType ?? "image/jpeg";
         var fileName = fileMeta.Name ?? $"photo_{photoId}.jpg";
 
-        var memoryStream = new MemoryStream();
-        var downloadRequest = _driveService.Files.Get(photoId);
-        await downloadRequest.DownloadAsync(memoryStream);
-        memoryStream.Position = 0;
+        if (thumbnailSize.HasValue)
+        {
+            var thumbnail = await TryGetThumbnailStreamAsync(
+                photoId, fileMeta.ThumbnailLink, thumbnailSize.Value);
 
-        return (memoryStream, mimeType, fileName);
+            if (thumbnail != null)
+            {
+                // Deliberately not fileMeta.Size - that is the original's size,
+                // which would be wildly wrong for a thumbnail.
+                return (thumbnail.Value.stream, thumbnail.Value.mimeType, fileName, thumbnail.Value.length);
+            }
+        }
+
+        // Stream the bytes straight from Drive rather than buffering the whole
+        // photo. A gallery page asks for 50 photos at once, and at up to 20MB
+        // each the old MemoryStream approach pinned all of it in RAM - buffers
+        // over 85KB land on the large object heap, which is not compacted, so
+        // the heap never shrank back afterwards. ResponseHeadersRead returns as
+        // soon as the headers arrive, so the caller pulls bytes off the network
+        // as it writes them to the client.
+        var downloadRequest = _driveService.Files.Get(photoId);
+        downloadRequest.Alt = DriveBaseServiceRequest<Google.Apis.Drive.v3.Data.File>.AltEnum.Media;
+
+        var response = await _driveService.HttpClient.SendAsync(
+            downloadRequest.CreateRequest(),
+            HttpCompletionOption.ResponseHeadersRead);
+
+        // Deleted photos 404 routinely, so release the connection before
+        // throwing rather than leaving it to the finalizer.
+        if (!response.IsSuccessStatusCode)
+        {
+            var statusCode = response.StatusCode;
+            response.Dispose();
+            throw new HttpRequestException(
+                $"Drive returned {(int)statusCode} downloading photo {photoId}");
+        }
+
+        // Disposing this stream releases the underlying connection; the caller
+        // owns it from here (FileStreamResult disposes it after the response).
+        var stream = await response.Content.ReadAsStreamAsync();
+
+        // Prefer what Drive says it is about to send us over the recorded file
+        // size; they agree for images, but the header describes this response.
+        var length = response.Content.Headers.ContentLength ?? fileMeta.Size;
+
+        return (stream, mimeType, fileName, length);
+    }
+
+    /// <summary>
+    /// Fetches Drive's own thumbnail render, or null when there isn't one to
+    /// serve. Fetching it here rather than handing the link to the browser is
+    /// deliberate: these links live on googleusercontent.com, which browser
+    /// tracking protection blocks, and they need our credentials anyway because
+    /// the files are private.
+    /// </summary>
+    private async Task<(Stream stream, string mimeType, long? length)?> TryGetThumbnailStreamAsync(
+        string photoId,
+        string? thumbnailLink,
+        int size)
+    {
+        // Drive generates thumbnails asynchronously, so a photo uploaded moments
+        // ago legitimately has no link yet.
+        if (string.IsNullOrEmpty(thumbnailLink))
+        {
+            _logger.LogDebug("No thumbnail available yet for {PhotoId}", photoId);
+            return null;
+        }
+
+        var response = await _driveService.HttpClient.GetAsync(
+            ResizeThumbnailLink(thumbnailLink, size),
+            HttpCompletionOption.ResponseHeadersRead);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Thumbnail links are short-lived; if one has gone stale we would
+            // rather serve the original than fail the request.
+            _logger.LogInformation(
+                "Thumbnail fetch for {PhotoId} returned {StatusCode}, serving original",
+                photoId, (int)response.StatusCode);
+            response.Dispose();
+            return null;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync();
+        var mimeType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+
+        return (stream, mimeType, response.Content.Headers.ContentLength);
+    }
+
+    /// <summary>
+    /// Drive hands back thumbnail links ending in a size hint such as "=s220".
+    /// Swapping that suffix asks the same CDN for a larger render.
+    /// </summary>
+    private static string ResizeThumbnailLink(string thumbnailLink, int size)
+    {
+        return Regex.Replace(thumbnailLink, @"=[swh][\w-]*$", $"=s{size}");
     }
 
     public async Task<bool> DeletePhotoAsync(string photoId)

@@ -17,6 +17,7 @@ public interface IGalleryService
         string contentType,
         long fileSize);
 
-    Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, string? ErrorMessage)> GetPhotoStreamAsync(
-        string photoId);
+    Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, long? Length, string? ErrorMessage)> GetPhotoStreamAsync(
+        string photoId,
+        int? thumbnailSize = null);
 }

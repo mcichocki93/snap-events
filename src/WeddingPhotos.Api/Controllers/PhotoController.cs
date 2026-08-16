@@ -11,6 +11,9 @@ namespace WeddingPhotos.Api.Controllers;
 [Route("[controller]")]
 public class PhotoController : ControllerBase
 {
+    // Longest edge for gallery grid tiles, sized for high-DPI screens.
+    private const int GridThumbnailPixels = 400;
+
     private readonly IGalleryService _galleryService;
     private readonly ILogger<PhotoController> _logger;
 
@@ -161,7 +164,7 @@ public class PhotoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds)]
-    public async Task<ActionResult> ProxyPhoto(string photoId)
+    public async Task<ActionResult> ProxyPhoto(string photoId, [FromQuery] string? size = null)
     {
         try
         {
@@ -173,12 +176,25 @@ public class PhotoController : ControllerBase
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
             }
 
-            var (success, stream, mimeType, _, errorMessage) = await _galleryService.GetPhotoStreamAsync(photoId);
+            // The gallery grid asks for "?size=thumb" on every tile. This used to
+            // be ignored, so a 50-photo page pulled 50 full-resolution originals.
+            int? thumbnailSize = string.Equals(size, "thumb", StringComparison.OrdinalIgnoreCase)
+                ? GridThumbnailPixels
+                : null;
+
+            var (success, stream, mimeType, _, length, errorMessage) =
+                await _galleryService.GetPhotoStreamAsync(photoId, thumbnailSize);
 
             if (!success || stream == null)
                 return NotFound(new { message = errorMessage });
 
             Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
+
+            // The stream is not seekable, so nothing downstream can work the
+            // length out on its own - without this the response goes out chunked.
+            if (length.HasValue)
+                Response.ContentLength = length.Value;
+
             return File(stream, mimeType ?? "image/jpeg");
         }
         catch (Exception ex)
@@ -198,7 +214,8 @@ public class PhotoController : ControllerBase
             if (!InputValidator.IsValidGuid(photoId))
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
 
-            var (success, stream, mimeType, fileName, errorMessage) = await _galleryService.GetPhotoStreamAsync(photoId);
+            var (success, stream, mimeType, fileName, length, errorMessage) =
+                await _galleryService.GetPhotoStreamAsync(photoId);
 
             if (!success || stream == null)
                 return NotFound(new { message = errorMessage });
@@ -207,6 +224,10 @@ public class PhotoController : ControllerBase
 
             _logger.LogInformation("Photo download: {PhotoId}, IP: {IP}",
                 photoId, HttpContext.Connection.RemoteIpAddress);
+
+            // Lets the browser show a real progress bar while downloading.
+            if (length.HasValue)
+                Response.ContentLength = length.Value;
 
             return File(stream, mimeType ?? "application/octet-stream", safeFileName);
         }

@@ -301,18 +301,20 @@ public class GalleryService : IGalleryService
         }
     }
 
-    public async Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, string? ErrorMessage)> GetPhotoStreamAsync(
-        string photoId)
+    public async Task<(bool Success, Stream? Stream, string? MimeType, string? FileName, long? Length, string? ErrorMessage)> GetPhotoStreamAsync(
+        string photoId,
+        int? thumbnailSize = null)
     {
         try
         {
-            var (stream, mimeType, fileName) = await _storageService.GetPhotoStreamAsync(photoId);
-            return (true, stream, mimeType, fileName, null);
+            var (stream, mimeType, fileName, length) =
+                await _storageService.GetPhotoStreamAsync(photoId, thumbnailSize);
+            return (true, stream, mimeType, fileName, length, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting photo stream: {PhotoId}", photoId);
-            return (false, null, null, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
+            return (false, null, null, null, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
         }
     }
 }
