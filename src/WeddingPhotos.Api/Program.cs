@@ -448,7 +448,14 @@ try
 
     if (hangfireEnabled)
     {
-        RecurringJob.AddOrUpdate<GalleryExpiryJob>(
+        // Resolved from DI rather than through the static RecurringJob facade.
+        // The static one reads JobStorage.Current, which only gets set as a side
+        // effect of UseHangfireDashboard - so with the dashboard turned off,
+        // which is the default in docker-compose.prod.yml, registering this job
+        // threw and the API could not start at all.
+        var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+
+        recurringJobs.AddOrUpdate<GalleryExpiryJob>(
             "gallery-expiry-reminders",
             job => job.SendExpiryRemindersAsync(),
             "0 9 * * *"); // codziennie o 9:00 UTC
