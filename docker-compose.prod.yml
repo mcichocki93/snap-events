@@ -1,18 +1,24 @@
-version: '3.8'
-
 # Production override - uses pre-built images from ghcr.io
 # Usage: docker compose -f docker-compose.prod.yml up -d
+#
+# This file is the source of truth for the VPS. Copy it to
+# /home/SnapEvents/docker-compose.prod.yml and re-run `up -d` after changing it,
+# otherwise the server keeps running the old config (see 2026-08-16 outage:
+# mem_limit was committed here but never reached the server).
+#
+# /home/SnapEvents/logs on the host must be owned by uid 999 (appuser in the
+# image), or Serilog's file sink silently fails to write.
 
 services:
   api:
-    image: ${API_IMAGE:-ghcr.io/GITHUB_USERNAME/snapevents-api:latest}
+    image: ${API_IMAGE:-ghcr.io/mcichocki93/snapevents-api:latest}
     expose:
       - "5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000
       - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
-      - MONGODB_DATABASE_NAME=${MONGODB_DATABASE_NAME:-WeddingPhotos}
+      - MONGODB_DATABASE_NAME=${MONGODB_DATABASE_NAME:-db_m115}
       - MONGODB_CLIENTS_COLLECTION=${MONGODB_CLIENTS_COLLECTION:-Clients}
       - GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/app/secrets/google-credentials.json
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
@@ -27,12 +33,19 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      # GC tuning for the 2GB host: workstation GC + aggressive memory release.
+      # With mem_limit set, .NET reads the cgroup limit and caps the heap at 75% of it.
+      - DOTNET_gcServer=0
+      - DOTNET_GCConserveMemory=5
     volumes:
       - /home/SnapEvents/secrets:/app/secrets:ro
       - /home/SnapEvents/logs:/app/logs
     restart: unless-stopped
-    mem_limit: 600m
-    memswap_limit: 600m
+    # 1g, not 600m: the API sits around 700MB under normal gallery traffic, so a
+    # tighter cap would kill the container during every busy morning.
+    mem_limit: 1g
+    memswap_limit: 1g
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -41,7 +54,7 @@ services:
       start_period: 30s
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/GITHUB_USERNAME/snapevents-frontend:latest}
+    image: ${FRONTEND_IMAGE:-ghcr.io/mcichocki93/snapevents-frontend:latest}
     ports:
       - "8080:80"
     depends_on:
