@@ -193,22 +193,58 @@ async function openSession(
  *
  * @returns the new Drive file ID
  */
+export interface ResumableUploadOptions {
+  /**
+   * A session left over from a previous page. Reusing it means Drive still
+   * holds whatever bytes arrived before the tab was discarded, so the photo
+   * carries on instead of starting over.
+   */
+  existingSessionUrl?: string | null
+
+  /** Called as soon as a session exists, so it can be persisted. */
+  onSessionOpen?: (uploadUrl: string) => void
+}
+
 export async function uploadFileResumable(
   guid: string,
   file: File,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
+  options: ResumableUploadOptions = {}
 ): Promise<string> {
-  const session = await openSession(guid, file)
+  let uploadUrl = options.existingSessionUrl ?? null
 
-  const uploadUrl = session.uploadUrl
-  if (!uploadUrl) throw new DirectUploadUnavailableError('No upload session URL returned')
+  if (!uploadUrl) {
+    const session = await openSession(guid, file)
+    uploadUrl = session.uploadUrl ?? null
+    if (!uploadUrl) throw new DirectUploadUnavailableError('No upload session URL returned')
+    options.onSessionOpen?.(uploadUrl)
+  }
 
   // The session now holds a quota slot; make sure it comes back even if the
   // page is destroyed before this finishes.
   armUnloadRelease(guid)
 
   try {
-    return await sendChunks(guid, file, uploadUrl, onProgress)
+    let startOffset = 0
+
+    // Picking up a session from a previous page: ask Drive how far it got
+    // rather than assuming anything about what survived.
+    if (options.existingSessionUrl) {
+      const received = await queryReceivedBytes(uploadUrl, file.size)
+
+      if (received === -1) {
+        // Drive already holds the whole file. Its ID went down with the page
+        // that was uploading, so the gallery cache simply expires instead of
+        // being invalidated - the photo is safe either way.
+        onProgress(100)
+        return ''
+      }
+
+      startOffset = received
+      onProgress(Math.round((received * 100) / file.size))
+    }
+
+    return await sendChunks(guid, file, uploadUrl, onProgress, startOffset)
   } finally {
     releaseUnloadHandler()
   }
@@ -218,9 +254,10 @@ async function sendChunks(
   guid: string,
   file: File,
   uploadUrl: string,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
+  startOffset = 0
 ): Promise<string> {
-  let offset = 0
+  let offset = startOffset
   let attempts = 0
 
   while (offset < file.size) {

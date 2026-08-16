@@ -10,6 +10,15 @@
         :theme-colors="themeColors"
       />
 
+      <!-- Photos left over from a page the phone discarded mid-send -->
+      <InterruptedUploadBanner
+        v-if="interruptedQueue"
+        :queue="interruptedQueue"
+        :theme-colors="themeColors"
+        @resume="resumeInterruptedUpload"
+        @discard="discardInterruptedUpload"
+      />
+
       <!-- Result of the last batch — sits above everything so it is the first
            thing seen when coming back to a finished upload -->
       <UploadSummary
@@ -92,6 +101,7 @@ import UploadHeader from '../components/upload/UploadHeader.vue'
 import UploadInfoCard from '../components/upload/UploadInfoCard.vue'
 import UploadArea from '../components/upload/UploadArea.vue'
 import UploadSummary from '../components/upload/UploadSummary.vue'
+import InterruptedUploadBanner from '../components/upload/InterruptedUploadBanner.vue'
 import FileList from '../components/upload/FileList.vue'
 import UploadActions from '../components/upload/UploadActions.vue'
 
@@ -115,6 +125,9 @@ const {
   batchAllowance,
   remainingInGallery,
   lastBatch,
+  interruptedQueue,
+  resumeInterruptedUpload,
+  discardInterruptedUpload,
   addFiles,
   removeFile,
   uploadFiles: uploadFilesComposable,

@@ -2,6 +2,7 @@ import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { useNotification } from './useNotification'
 import { useWakeLock } from './useWakeLock'
 import { uploadFileResumable, DirectUploadUnavailableError } from './useResumableUpload'
+import { saveQueue, loadQueue, deleteQueue, type StoredQueue } from '../services/uploadQueueStore'
 import api from '../services/api'
 import type { Client, FileUpload, ComposableResult } from '../types'
 
@@ -34,6 +35,9 @@ export interface UsePhotoUploadReturn {
   uploading: Ref<boolean>
   uploadedCount: Ref<number>
   lastBatch: Ref<UploadBatchResult | null>
+  interruptedQueue: Ref<StoredQueue | null>
+  resumeInterruptedUpload: () => void
+  discardInterruptedUpload: () => Promise<void>
   hasFiles: ComputedRef<boolean>
   canUpload: ComputedRef<boolean>
   batchAllowance: ComputedRef<number>
@@ -96,6 +100,77 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
   restoreLastBatch()
 
+  // An interrupted batch found in browser storage, offered back to the guest.
+  const interruptedQueue = ref<StoredQueue | null>(null)
+
+  // Session URLs for files still in flight, so a resumed upload continues them
+  // rather than opening a second session and paying the quota twice.
+  const sessionUrls = new Map<string, string>()
+
+  const persistQueue = async (): Promise<void> => {
+    await saveQueue({
+      guid,
+      createdAt: Date.now(),
+      items: selectedFiles.value.map(f => ({
+        name: f.name,
+        file: f.file,
+        status: f.uploaded ? 'done' : f.error ? 'failed' : 'pending',
+        sessionUrl: sessionUrls.get(f.name) ?? null,
+        photoId: null
+      }))
+    })
+  }
+
+  const checkForInterruptedUpload = async (): Promise<void> => {
+    interruptedQueue.value = await loadQueue(guid)
+  }
+
+  void checkForInterruptedUpload()
+
+  /**
+   * Puts the unfinished photos from a previous page back on the list, ready to
+   * be sent again. The guest does not have to find them in their camera roll a
+   * second time - which they could not reliably do anyway.
+   */
+  const resumeInterruptedUpload = (): void => {
+    const queue = interruptedQueue.value
+    if (!queue) return
+
+    selectedFiles.value = queue.items
+      .filter(item => item.status !== 'done')
+      .map(item => {
+        if (item.sessionUrl) sessionUrls.set(item.name, item.sessionUrl)
+
+        return {
+          file: item.file,
+          name: item.name,
+          size: item.file.size,
+          uploading: false,
+          uploaded: false,
+          error: false,
+          progress: 0
+        }
+      })
+
+    interruptedQueue.value = null
+  }
+
+  /**
+   * Throws the leftover batch away, handing back the quota slot of any session
+   * that was still open so the gallery does not lose a photo from its
+   * allowance.
+   */
+  const discardInterruptedUpload = async (): Promise<void> => {
+    const queue = interruptedQueue.value
+    interruptedQueue.value = null
+
+    if (queue?.items.some(item => item.sessionUrl && item.status !== 'done')) {
+      await api.cancelUploadSession(guid).catch(() => {})
+    }
+
+    await deleteQueue(guid)
+  }
+
   /**
    * A rejection is worth retrying only when the server never made a decision.
    * Anything it answered - wrong file type, quota exhausted, rate limited -
@@ -141,9 +216,22 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   const uploadOne = async (fileObj: FileUpload): Promise<void> => {
     if (directUploadAvailable) {
       try {
-        await uploadFileResumable(guid, fileObj.file, (percent) => {
-          fileObj.progress = percent
-        })
+        await uploadFileResumable(
+          guid,
+          fileObj.file,
+          (percent) => {
+            fileObj.progress = percent
+          },
+          {
+            existingSessionUrl: sessionUrls.get(fileObj.name),
+            onSessionOpen: (url) => {
+              // Recorded before a single byte moves, so a page discarded
+              // mid-photo can pick this session up instead of starting again.
+              sessionUrls.set(fileObj.name, url)
+              void persistQueue()
+            }
+          }
+        )
         return
       } catch (error) {
         if (!(error instanceof DirectUploadUnavailableError)) throw error
@@ -317,6 +405,11 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     uploading.value = true
     uploadedCount.value = 0
 
+    // Written before anything is sent, so a tab discarded seconds later can
+    // still recover the photos. Best effort throughout: if storage refuses,
+    // the upload proceeds without the safety net rather than failing.
+    await persistQueue()
+
     // Hold the screen awake for the whole batch, not per file, so the phone
     // cannot lock in the gap between two photos.
     await wakeLock.acquire()
@@ -337,6 +430,11 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
             fileObj.uploaded = true
             fileObj.uploading = false
             uploadedCount.value++
+            sessionUrls.delete(fileObj.name)
+
+            // Persisted per photo, not per batch: whatever the tab does next,
+            // the record already knows this one is safely on Drive.
+            await persistQueue()
 
             notify({
               type: 'positive',
@@ -378,6 +476,14 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     // a blank screen and concluded nothing had been sent.
     recordBatch(uploadedCount.value, selectedFiles.value.filter(f => f.error).length)
 
+    // The batch is over either way, so the stored copy of the photos has done
+    // its job and should not linger on the guest's phone.
+    if (selectedFiles.value.every(f => f.uploaded)) {
+      await deleteQueue(guid)
+    } else {
+      await persistQueue()
+    }
+
     if (uploadedCount.value > 0) {
       return { success: true, data: { count: uploadedCount.value } }
     }
@@ -393,6 +499,7 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     selectedFiles.value = selectedFiles.value.filter(f => !f.uploaded)
     uploadedCount.value = 0
     lastBatch.value = null
+    void deleteQueue(guid)
 
     try {
       sessionStorage.removeItem(batchStorageKey)
@@ -441,12 +548,15 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     uploading,
     uploadedCount,
     lastBatch,
+    interruptedQueue,
     hasFiles,
     canUpload,
     batchAllowance,
     remainingInGallery,
 
     // Methods
+    resumeInterruptedUpload,
+    discardInterruptedUpload,
     addFiles,
     removeFile,
     uploadFiles,
