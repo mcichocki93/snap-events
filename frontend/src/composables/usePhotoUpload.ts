@@ -14,6 +14,15 @@ const STALL_TIMEOUT_MS = 60_000
 // limited to 100 requests per hour per IP.
 const MAX_ATTEMPTS = 3
 
+/**
+ * How many photos may go in a single send, on every package.
+ *
+ * This is separate from the gallery's own quota: that caps the whole event,
+ * this caps one batch. Short batches finish before a phone backgrounds the tab
+ * long enough to have it discarded, and give the guest confirmation sooner.
+ */
+export const BATCH_UPLOAD_LIMIT = 10
+
 export interface UploadBatchResult {
   uploaded: number
   failed: number
@@ -27,6 +36,8 @@ export interface UsePhotoUploadReturn {
   lastBatch: Ref<UploadBatchResult | null>
   hasFiles: ComputedRef<boolean>
   canUpload: ComputedRef<boolean>
+  batchAllowance: ComputedRef<number>
+  remainingInGallery: ComputedRef<number | null>
   addFiles: (files: FileList | File[]) => void
   removeFile: (index: number) => void
   uploadFiles: () => Promise<ComposableResult<{ count: number }>>
@@ -259,16 +270,24 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
     selectedFiles.value.push(...validFiles)
 
-    // Check if too many files selected, accounting for already uploaded files
-    const maxFiles = clientRef.value.maxFiles
-    const alreadyUploaded = clientRef.value.uploadedFilesCount
-    const remaining = maxFiles > 0 ? maxFiles - alreadyUploaded : Infinity
-    if (maxFiles > 0 && selectedFiles.value.length > remaining) {
-      notify({
-        type: 'warning',
-        message: `Możesz przesłać jeszcze maksymalnie ${remaining} zdjęć`
-      })
-      selectedFiles.value = selectedFiles.value.slice(0, remaining)
+    // Two separate ceilings apply: how many photos this batch may carry, and
+    // how many the gallery has left in its package. Trim to the tighter one and
+    // say which one was hit, because the fix differs - send these first, versus
+    // the event is full.
+    const allowed = batchAllowance.value
+
+    if (selectedFiles.value.length > allowed) {
+      const galleryIsTighter = allowed < BATCH_UPLOAD_LIMIT
+
+      const message = allowed === 0
+        ? 'Ta galeria osiągnęła swój limit zdjęć'
+        : galleryIsTighter
+          ? `W tej galerii możesz przesłać jeszcze ${allowed} zdjęć`
+          : `Maksymalnie ${BATCH_UPLOAD_LIMIT} zdjęć na raz — wyślij te, potem dobierz kolejne`
+
+      notify({ type: 'warning', message })
+
+      selectedFiles.value = selectedFiles.value.slice(0, allowed)
     }
   }
 
@@ -392,12 +411,28 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
   // Computed
   const hasFiles = computed(() => selectedFiles.value.length > 0)
+
+  /**
+   * Photos left in the gallery's package, or null when it has no limit.
+   */
+  const remainingInGallery = computed<number | null>(() => {
+    if (!clientRef.value) return null
+    const { maxFiles, uploadedFilesCount } = clientRef.value
+    if (maxFiles === 0) return null // 0 means unlimited
+    return Math.max(0, maxFiles - uploadedFilesCount)
+  })
+
+  /**
+   * How many photos this batch may still take: the batch cap, or whatever the
+   * gallery has left if that is smaller.
+   */
+  const batchAllowance = computed(() =>
+    Math.min(BATCH_UPLOAD_LIMIT, remainingInGallery.value ?? BATCH_UPLOAD_LIMIT)
+  )
+
   const canUpload = computed(() => {
     if (!hasFiles.value || clientRef.value === null || uploading.value) return false
-    const { maxFiles, uploadedFilesCount } = clientRef.value
-    if (maxFiles === 0) return true // unlimited
-    const remaining = maxFiles - uploadedFilesCount
-    return remaining > 0 && selectedFiles.value.length <= remaining
+    return selectedFiles.value.length <= batchAllowance.value
   })
 
   return {
@@ -408,6 +443,8 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     lastBatch,
     hasFiles,
     canUpload,
+    batchAllowance,
+    remainingInGallery,
 
     // Methods
     addFiles,

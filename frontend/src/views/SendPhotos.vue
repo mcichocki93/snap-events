@@ -23,7 +23,9 @@
       <!-- Info Card -->
       <UploadInfoCard
         v-if="client"
-        :max-files="client.maxFiles"
+        :batch-limit="BATCH_UPLOAD_LIMIT"
+        :batch-allowance="batchAllowance"
+        :remaining-in-gallery="remainingInGallery"
         :max-file-size="client.maxFileSize"
         :selected-count="selectedFiles.length"
         :theme-colors="themeColors"
@@ -49,7 +51,7 @@
       <!-- Selected Files List -->
       <FileList
         :files="selectedFiles"
-        :max-files="client?.maxFiles || 10"
+        :max-files="batchAllowance"
         :can-upload="canUpload"
         :uploading="uploading"
         :theme-colors="themeColors"
@@ -82,7 +84,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useClientData } from '../composables/useClientData'
-import { usePhotoUpload } from '../composables/usePhotoUpload'
+import { usePhotoUpload, BATCH_UPLOAD_LIMIT } from '../composables/usePhotoUpload'
 import AOS from 'aos'
 
 // Components
@@ -110,6 +112,8 @@ const {
   selectedFiles,
   uploading,
   canUpload,
+  batchAllowance,
+  remainingInGallery,
   lastBatch,
   addFiles,
   removeFile,

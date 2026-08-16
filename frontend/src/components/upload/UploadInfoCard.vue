@@ -8,16 +8,21 @@
         Informacje o przesyłaniu
       </h3>
       <div class="info-item" :style="{ color: themeColors.font }">
-        Limit zdjęć na jeden upload: <strong>{{ maxFiles === 0 ? 'bez limitu' : maxFiles }}</strong>
+        Zdjęć na jedno wysłanie: <strong>{{ batchLimit }}</strong>
+      </div>
+      <div v-if="remainingInGallery !== null" class="info-item" :style="{ color: themeColors.font }">
+        Pozostało w galerii: <strong>{{ remainingInGallery }}</strong>
       </div>
       <div v-if="selectedCount > 0" class="info-item" :style="{ color: themeColors.font }">
-        Wybrano: <strong>{{ maxFiles === 0 ? selectedCount : `${selectedCount} / ${maxFiles}` }}</strong>
+        Wybrano: <strong>{{ selectedCount }} / {{ batchAllowance }}</strong>
       </div>
       <div class="info-item" :style="{ color: themeColors.font }">
         Maksymalny rozmiar pliku: <strong>{{ maxFileSizeMB }} MB</strong>
       </div>
       <div class="info-note" :style="{ color: themeColors.font }">
-        Możesz przesyłać zdjęcia wielokrotnie bez limitu całkowitej liczby
+        {{ remainingInGallery === null
+          ? 'Możesz wysyłać kolejne partie bez ograniczeń'
+          : 'Po wysłaniu tej partii możesz dobrać następne' }}
       </div>
     </div>
   </div>
@@ -28,7 +33,12 @@ import { computed } from 'vue'
 import type { ThemeColors } from '../../types/types'
 
 const props = defineProps<{
-  maxFiles: number
+  /** Photos allowed in one send, on every package. */
+  batchLimit: number
+  /** How many this batch may still take - the batch cap, or less near the quota. */
+  batchAllowance: number
+  /** Photos left in the gallery's package; null when it has no limit. */
+  remainingInGallery: number | null
   maxFileSize: number
   selectedCount: number
   themeColors: ThemeColors
