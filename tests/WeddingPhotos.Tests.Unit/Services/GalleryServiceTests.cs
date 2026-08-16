@@ -274,6 +274,12 @@ public class GalleryServiceTests
             .Setup(x => x.GetByGuidAsync(guid))
             .ReturnsAsync(client);
 
+        // Uploads go through an atomic slot reservation; without this the quota
+        // check reads it as exhausted and rejects the upload.
+        _mockClientRepository
+            .Setup(x => x.TryReserveUploadSlotAsync(guid))
+            .ReturnsAsync(client);
+
         _mockStorageService
             .Setup(x => x.UploadPhotoAsync(fileStream, fileName, folderId))
             .ReturnsAsync("photo123");

@@ -184,11 +184,26 @@ public class CreateClientRequestValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithZeroMaxFiles_ShouldHaveValidationError()
+    public async Task Validate_WithZeroMaxFiles_ShouldBeValid()
+    {
+        // Arrange
+        // Zero is how the admin panel expresses "no upload limit".
+        var request = CreateValidRequest();
+        request.MaxFiles = 0;
+
+        // Act
+        var result = await _validator.ValidateAsync(request);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithNegativeMaxFiles_ShouldHaveValidationError()
     {
         // Arrange
         var request = CreateValidRequest();
-        request.MaxFiles = 0;
+        request.MaxFiles = -1;
 
         // Act
         var result = await _validator.ValidateAsync(request);
@@ -252,8 +267,10 @@ public class CreateClientRequestValidatorTests
     public async Task Validate_WithInvalidUrl_ShouldHaveValidationError()
     {
         // Arrange
+        // A bare folder ID is accepted these days, and "not-a-valid-url" happens
+        // to look like one. This has spaces, so it can be neither an ID nor a URL.
         var request = CreateValidRequest();
-        request.GoogleStorageUrl = "not-a-valid-url";
+        request.GoogleStorageUrl = "definitely not an id";
 
         // Act
         var result = await _validator.ValidateAsync(request);

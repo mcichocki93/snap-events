@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using Moq;
 using WeddingPhotos.Domain.Models;
 using WeddingPhotos.Infrastructure.Configuration;
@@ -10,61 +11,92 @@ namespace WeddingPhotos.Tests.Unit.Repositories;
 
 public class ClientRepositoryTests
 {
-    // Note: ClientRepository requires MongoDB connection for full testing.
-    // These tests focus on validation logic and error handling.
+    // ClientRepository takes an already-connected IMongoDatabase; the connection
+    // string and database name are validated at startup in Program.cs, so there
+    // is nothing config-related left for the constructor to reject.
     // For full database operations testing, consider integration tests.
 
-    [Fact]
-    public void Constructor_ShouldThrowException_WhenConnectionStringIsEmpty()
+    private static Mock<IMongoDatabase> CreateDatabaseMock()
     {
-        // Arrange
-        var settings = Options.Create(new MongoDbSettings
-        {
-            ConnectionString = "",
-            DatabaseName = "TestDb",
-            ClientsCollectionName = "clients"
-        });
-        var logger = Mock.Of<ILogger<ClientRepository>>();
+        var database = new Mock<IMongoDatabase>();
+        database
+            .Setup(d => d.GetCollection<Client>(
+                It.IsAny<string>(), It.IsAny<MongoCollectionSettings>()))
+            .Returns(Mock.Of<IMongoCollection<Client>>());
 
-        // Act & Assert
-        var act = () => new ClientRepository(settings, logger);
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*MongoDB connection string or database name is not configured*");
+        return database;
     }
 
     [Fact]
-    public void Constructor_ShouldThrowException_WhenDatabaseNameIsEmpty()
+    public void Constructor_ShouldResolveConfiguredCollection()
     {
         // Arrange
+        var database = CreateDatabaseMock();
         var settings = Options.Create(new MongoDbSettings
         {
             ConnectionString = "mongodb://localhost:27017",
-            DatabaseName = "",
+            DatabaseName = "TestDb",
             ClientsCollectionName = "clients"
         });
         var logger = Mock.Of<ILogger<ClientRepository>>();
 
-        // Act & Assert
-        var act = () => new ClientRepository(settings, logger);
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*MongoDB connection string or database name is not configured*");
+        // Act
+        _ = new ClientRepository(database.Object, settings, logger);
+
+        // Assert
+        database.Verify(
+            d => d.GetCollection<Client>("clients", It.IsAny<MongoCollectionSettings>()),
+            Times.Once);
     }
 
     [Fact]
-    public void Constructor_ShouldThrowException_WhenConnectionStringIsNull()
+    public void Constructor_ShouldFallBackToDefaultCollection_WhenNameNotConfigured()
     {
         // Arrange
+        var database = CreateDatabaseMock();
         var settings = Options.Create(new MongoDbSettings
         {
-            ConnectionString = null!,
+            ConnectionString = "mongodb://localhost:27017",
+            DatabaseName = "TestDb",
+            ClientsCollectionName = null!
+        });
+        var logger = Mock.Of<ILogger<ClientRepository>>();
+
+        // Act
+        _ = new ClientRepository(database.Object, settings, logger);
+
+        // Assert
+        database.Verify(
+            d => d.GetCollection<Client>("Clients", It.IsAny<MongoCollectionSettings>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_ShouldNotThrow_WhenIndexCreationFails()
+    {
+        // Arrange
+        // Index creation is best-effort: a replica that rejects it must not stop
+        // the API from starting.
+        var collection = new Mock<IMongoCollection<Client>>();
+        collection.Setup(c => c.Indexes).Throws(new MongoException("index creation failed"));
+
+        var database = new Mock<IMongoDatabase>();
+        database
+            .Setup(d => d.GetCollection<Client>(
+                It.IsAny<string>(), It.IsAny<MongoCollectionSettings>()))
+            .Returns(collection.Object);
+
+        var settings = Options.Create(new MongoDbSettings
+        {
+            ConnectionString = "mongodb://localhost:27017",
             DatabaseName = "TestDb",
             ClientsCollectionName = "clients"
         });
         var logger = Mock.Of<ILogger<ClientRepository>>();
 
         // Act & Assert
-        var act = () => new ClientRepository(settings, logger);
-        act.Should().Throw<InvalidOperationException>();
+        var act = () => new ClientRepository(database.Object, settings, logger);
+        act.Should().NotThrow();
     }
 
     // Testing validation logic (ValidateClient method)
