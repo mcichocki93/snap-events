@@ -343,4 +343,144 @@ public class GalleryServiceTests
 
         _mockStorageService.Verify(x => x.UploadPhotoAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
+
+    /// <summary>
+    /// The counter drifts upward - abandoned sessions keep their slot, and
+    /// photos deleted straight from Drive are never noticed - so a gallery can
+    /// look full while it is not. The guest must not pay for that.
+    /// </summary>
+    [Fact]
+    public async Task UploadPhotoAsync_WhenCounterOvershotReality_ReconcilesAndAccepts()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var folderUrl = "https://drive.google.com/drive/folders/folder123";
+
+        // Counter says the 150-photo package is used up; Drive holds 140.
+        var client = new Client
+        {
+            Guid = guid,
+            IsActive = true,
+            DateTo = DateTime.UtcNow.AddDays(30),
+            MaxFiles = 150,
+            UploadedFilesCount = 150,
+            MaxFileSize = 10485760,
+            GoogleStorageUrl = folderUrl
+        };
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        _mockStorageService
+            .Setup(x => x.GetPhotoCountAsync(folderUrl))
+            .ReturnsAsync(140);
+
+        // Refuses while the counter is wrong, succeeds once it has been fixed.
+        _mockClientRepository
+            .SetupSequence(x => x.TryReserveUploadSlotAsync(guid))
+            .ReturnsAsync((Client?)null)
+            .ReturnsAsync(client);
+
+        _mockClientRepository
+            .Setup(x => x.ReconcileUploadedFilesCountAsync(guid, 150, 140))
+            .ReturnsAsync(true);
+
+        _mockStorageService
+            .Setup(x => x.UploadPhotoAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("photo123");
+
+        _mockCacheService
+            .Setup(x => x.RemoveByPrefixAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var (success, _, errorMessage) = await _galleryService.UploadPhotoAsync(
+            guid, new MemoryStream(new byte[] { 1, 2, 3 }), "test.jpg", "image/jpeg", 1024);
+
+        // Assert
+        success.Should().BeTrue();
+        errorMessage.Should().BeNull();
+        _mockClientRepository.Verify(
+            x => x.ReconcileUploadedFilesCountAsync(guid, 150, 140), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadPhotoAsync_WhenGalleryGenuinelyFull_StillRejects()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var folderUrl = "https://drive.google.com/drive/folders/folder123";
+
+        // Counter and Drive agree: the package really is used up.
+        var client = new Client
+        {
+            Guid = guid,
+            IsActive = true,
+            DateTo = DateTime.UtcNow.AddDays(30),
+            MaxFiles = 150,
+            UploadedFilesCount = 150,
+            MaxFileSize = 10485760,
+            GoogleStorageUrl = folderUrl
+        };
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        _mockStorageService
+            .Setup(x => x.GetPhotoCountAsync(folderUrl))
+            .ReturnsAsync(150);
+
+        _mockClientRepository
+            .Setup(x => x.TryReserveUploadSlotAsync(guid))
+            .ReturnsAsync((Client?)null);
+
+        // Act
+        var (success, _, errorMessage) = await _galleryService.UploadPhotoAsync(
+            guid, new MemoryStream(new byte[] { 1, 2, 3 }), "test.jpg", "image/jpeg", 1024);
+
+        // Assert
+        success.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+
+        _mockClientRepository.Verify(
+            x => x.ReconcileUploadedFilesCountAsync(
+                It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+            Times.Never);
+
+        _mockStorageService.Verify(
+            x => x.UploadPhotoAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Galleries without a limit never fail the reservation on quota, so a
+    /// refusal there means something else - and must not cost a Drive listing.
+    /// </summary>
+    [Fact]
+    public async Task UploadPhotoAsync_WithUnlimitedGallery_DoesNotCountDrive()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = new Client
+        {
+            Guid = guid,
+            IsActive = true,
+            DateTo = DateTime.UtcNow.AddDays(30),
+            MaxFiles = 0, // unlimited
+            UploadedFilesCount = 500,
+            MaxFileSize = 10485760,
+            GoogleStorageUrl = "https://drive.google.com/drive/folders/folder123"
+        };
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+        _mockClientRepository
+            .Setup(x => x.TryReserveUploadSlotAsync(guid))
+            .ReturnsAsync((Client?)null);
+
+        // Act
+        var (success, _, _) = await _galleryService.UploadPhotoAsync(
+            guid, new MemoryStream(new byte[] { 1, 2, 3 }), "test.jpg", "image/jpeg", 1024);
+
+        // Assert
+        success.Should().BeFalse();
+        _mockStorageService.Verify(x => x.GetPhotoCountAsync(It.IsAny<string>()), Times.Never);
+    }
 }

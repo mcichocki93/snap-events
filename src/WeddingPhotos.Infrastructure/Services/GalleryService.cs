@@ -223,7 +223,7 @@ public class GalleryService : IGalleryService
             // Atomically reserve an upload slot. This both enforces the quota
             // (race-condition-safe across concurrent guests) and tracks the
             // count for unlimited galleries too. Returns null if quota exhausted.
-            var reservedClient = await _clientRepository.TryReserveUploadSlotAsync(guid);
+            var reservedClient = await ReserveUploadSlotAsync(client, guid);
             if (reservedClient == null)
             {
                 _logger.LogWarning(
@@ -305,6 +305,48 @@ public class GalleryService : IGalleryService
         }
     }
 
+    /// <summary>
+    /// Reserves an upload slot, checking the count against Drive before turning
+    /// a guest away.
+    ///
+    /// UploadedFilesCount only ever drifts upward. A session that is opened and
+    /// abandoned keeps the slot it reserved, and photos deleted straight from
+    /// Drive are never noticed here at all. Both make a gallery look full while
+    /// it is not, and the cost lands on the guest: "limit reached" while there
+    /// is room. So reality is consulted at the one moment it matters - the
+    /// moment the answer would cost someone a photo - rather than on a timer.
+    /// </summary>
+    private async Task<Client?> ReserveUploadSlotAsync(Client client, string guid)
+    {
+        var reserved = await _clientRepository.TryReserveUploadSlotAsync(guid);
+        if (reserved != null) return reserved;
+
+        // Galleries without a limit never fail on quota, so a refusal here is
+        // not something a recount could explain.
+        if (client.MaxFiles == 0) return null;
+
+        var actualCount = await _storageService.GetPhotoCountAsync(client.GoogleStorageUrl);
+        var storedCount = client.UploadedFilesCount;
+
+        if (actualCount >= storedCount)
+        {
+            _logger.LogInformation(
+                "Gallery {Guid} is genuinely full: {Actual} photos on Drive, limit {Max}",
+                guid, actualCount, client.MaxFiles);
+            return null;
+        }
+
+        _logger.LogWarning(
+            "Upload count for {Guid} had drifted: counter said {Stored}, Drive holds {Actual}",
+            guid, storedCount, actualCount);
+
+        await _clientRepository.ReconcileUploadedFilesCountAsync(guid, storedCount, actualCount);
+
+        // Retried whether or not our own correction was the one that applied -
+        // a concurrent request may have fixed it first, which is just as good.
+        return await _clientRepository.TryReserveUploadSlotAsync(guid);
+    }
+
     public async Task<(bool Success, CreateUploadSessionResponse Response, string? ErrorMessage)> CreateUploadSessionAsync(
         string guid,
         string fileName,
@@ -350,9 +392,7 @@ public class GalleryService : IGalleryService
                     ApplicationConstants.ErrorMessages.InvalidFileType);
 
             // Reserved up front so concurrent guests cannot overshoot the quota.
-            // If the guest walks away mid-upload the slot is only returned when
-            // the client calls cancel, so an abandoned session can hold one.
-            var reservedClient = await _clientRepository.TryReserveUploadSlotAsync(guid);
+            var reservedClient = await ReserveUploadSlotAsync(client, guid);
             if (reservedClient == null)
             {
                 const string quotaMessage = "Osiągnięto limit zdjęć dla tej galerii";

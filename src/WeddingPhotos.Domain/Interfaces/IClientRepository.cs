@@ -23,6 +23,16 @@ public interface IClientRepository
     /// Called when an upload fails after the slot was reserved.
     /// </summary>
     Task ReleaseUploadSlotAsync(string guid);
+
+    /// <summary>
+    /// Corrects UploadedFilesCount to a figure taken from storage.
+    ///
+    /// Only applies while the stored value is still <paramref name="expectedCurrent"/>,
+    /// so two requests reconciling at once cannot both subtract the same drift.
+    /// Returns false when someone got there first, which is not an error - the
+    /// caller simply retries the reservation.
+    /// </summary>
+    Task<bool> ReconcileUploadedFilesCountAsync(string guid, int expectedCurrent, int actualCount);
     Task<bool> DeactivateAsync(string guid);
     Task<bool> DeleteAsync(string guid);
     Task<List<Client>> GetExpiredClientsAsync();

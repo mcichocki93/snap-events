@@ -252,6 +252,33 @@ public class ClientRepository : IClientRepository
         }
     }
 
+    public async Task<bool> ReconcileUploadedFilesCountAsync(
+        string guid,
+        int expectedCurrent,
+        int actualCount)
+    {
+        try
+        {
+            // Compare-and-set rather than a decrement: if a concurrent request
+            // has already corrected the drift, this simply does not match and
+            // the caller retries against the corrected value.
+            var filter = Builders<Client>.Filter.And(
+                Builders<Client>.Filter.Eq(x => x.Guid, guid),
+                Builders<Client>.Filter.Eq(x => x.UploadedFilesCount, expectedCurrent)
+            );
+
+            var update = Builders<Client>.Update.Set(x => x.UploadedFilesCount, actualCount);
+
+            var result = await _clientsCollection.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reconciling upload count for guid: {Guid}", guid);
+            return false;
+        }
+    }
+
     public async Task<bool> DeactivateAsync(string guid)
     {
         try
