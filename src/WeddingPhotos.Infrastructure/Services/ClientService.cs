@@ -1,24 +1,21 @@
-using AutoMapper;
 using Microsoft.Extensions.Logging;
 using WeddingPhotos.Domain.Constants;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
+using WeddingPhotos.Infrastructure.Mapping;
 
 namespace WeddingPhotos.Infrastructure.Services;
 
 public class ClientService : IClientService
 {
     private readonly IClientRepository _clientRepository;
-    private readonly IMapper _mapper;
     private readonly ILogger<ClientService> _logger;
 
     public ClientService(
         IClientRepository clientRepository,
-        IMapper mapper,
         ILogger<ClientService> logger)
     {
         _clientRepository = clientRepository;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -50,8 +47,8 @@ public class ClientService : IClientService
                 return (false, null, "Gallery has expired");
             }
 
-            // Map to response DTO using AutoMapper (personal data excluded by mapping profile)
-            var response = _mapper.Map<ClientResponse>(client);
+            // Personal details are deliberately absent from this shape
+            var response = client.ToResponse();
 
             return (true, response, null);
         }

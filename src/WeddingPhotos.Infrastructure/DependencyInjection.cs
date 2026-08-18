@@ -66,9 +66,6 @@ public static class DependencyInjection
             services.AddSingleton<IConnectionMultiplexer>(provider => null!);
         }
 
-        // Register AutoMapper
-        services.AddAutoMapper(typeof(Mapping.MappingProfile));
-
         // Register cache service
         services.AddSingleton<ICacheService, CacheService>();
 

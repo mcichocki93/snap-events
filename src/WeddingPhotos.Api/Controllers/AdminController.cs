@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +9,7 @@ using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
 using WeddingPhotos.Domain.Validation;
+using WeddingPhotos.Infrastructure.Mapping;
 
 namespace WeddingPhotos.Api.Controllers;
 
@@ -18,18 +18,15 @@ namespace WeddingPhotos.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IClientRepository _clientRepository;
-    private readonly IMapper _mapper;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         IClientRepository clientRepository,
-        IMapper mapper,
         IConfiguration configuration,
         ILogger<AdminController> logger)
     {
         _clientRepository = clientRepository;
-        _mapper = mapper;
         _configuration = configuration;
         _logger = logger;
     }
@@ -111,7 +108,7 @@ public class AdminController : ControllerBase
         if (existing != null)
             return Conflict(new { error = "Galeria z tym GUID już istnieje" });
 
-        var client = _mapper.Map<Client>(request);
+        var client = request.ToClient();
         var created = await _clientRepository.CreateAsync(client);
 
         _logger.LogInformation("Admin created gallery: {Guid} for {Email}", created.Guid, created.Email);

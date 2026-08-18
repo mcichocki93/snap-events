@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -6,7 +5,6 @@ using WeddingPhotos.Domain.Constants;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
-using WeddingPhotos.Infrastructure.Mapping;
 using WeddingPhotos.Infrastructure.Services;
 
 namespace WeddingPhotos.Tests.Unit.Services;
@@ -15,7 +13,6 @@ public class ClientServiceTests
 {
     private readonly Mock<IClientRepository> _mockClientRepository;
     private readonly Mock<ILogger<ClientService>> _mockLogger;
-    private readonly IMapper _mapper;
     private readonly ClientService _clientService;
 
     public ClientServiceTests()
@@ -23,15 +20,8 @@ public class ClientServiceTests
         _mockClientRepository = new Mock<IClientRepository>();
         _mockLogger = new Mock<ILogger<ClientService>>();
 
-        var config = new MapperConfiguration(cfg =>
-        {
-            cfg.AddProfile<MappingProfile>();
-        });
-        _mapper = config.CreateMapper();
-
         _clientService = new ClientService(
             _mockClientRepository.Object,
-            _mapper,
             _mockLogger.Object);
     }
 
