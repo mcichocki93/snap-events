@@ -142,31 +142,20 @@ export default {
   },
 
   /**
-   * Get the proxied download URL for a photo (avoids tracking prevention)
+   * Proxied photo URLs. Every one carries the gallery it is being viewed
+   * through: the API checks the photo really belongs there, so a photo ID on
+   * its own no longer opens a photo from someone else's gallery.
    */
-  getDownloadUrl(photoId: string): string {
-    return `${API_BASE_URL}/photo/proxy/${photoId}/download`
+  getProxyThumbnailUrl(guid: string, photoId: string): string {
+    return `${API_BASE_URL}/photo/proxy/${guid}/${photoId}?size=thumb`
   },
 
-  /**
-   * Get proxied thumbnail URL (avoids tracking prevention)
-   */
-  getProxyThumbnailUrl(photoId: string): string {
-    return `${API_BASE_URL}/photo/proxy/${photoId}?size=thumb`
+  getProxyFullUrl(guid: string, photoId: string): string {
+    return `${API_BASE_URL}/photo/proxy/${guid}/${photoId}`
   },
 
-  /**
-   * Get proxied full image URL (avoids tracking prevention)
-   */
-  getProxyFullUrl(photoId: string): string {
-    return `${API_BASE_URL}/photo/proxy/${photoId}`
-  },
-
-  /**
-   * Get proxied download URL (avoids tracking prevention)
-   */
-  getProxyDownloadUrl(photoId: string): string {
-    return `${API_BASE_URL}/photo/proxy/${photoId}/download`
+  getProxyDownloadUrl(guid: string, photoId: string): string {
+    return `${API_BASE_URL}/photo/proxy/${guid}/${photoId}/download`
   },
 
   /**

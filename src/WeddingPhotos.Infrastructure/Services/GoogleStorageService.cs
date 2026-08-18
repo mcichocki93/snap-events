@@ -299,10 +299,15 @@ public class GoogleStorageService : IGoogleStorageService
 
     public async Task<int> GetPhotoCountAsync(string folderUrl)
     {
+        return (await GetPhotoIdsAsync(folderUrl)).Count;
+    }
+
+    public async Task<HashSet<string>> GetPhotoIdsAsync(string folderUrl)
+    {
         try
         {
             var folderId = GoogleDriveHelper.ExtractFolderId(folderUrl);
-            var count = 0;
+            var ids = new HashSet<string>(StringComparer.Ordinal);
             string? pageToken = null;
 
             // Drive has no count endpoint, so we page through asking for the
@@ -317,16 +322,21 @@ public class GoogleStorageService : IGoogleStorageService
                 request.PageToken = pageToken;
 
                 var result = await request.ExecuteAsync();
-                count += result.Files?.Count ?? 0;
+
+                foreach (var file in result.Files ?? [])
+                {
+                    if (!string.IsNullOrEmpty(file.Id)) ids.Add(file.Id);
+                }
+
                 pageToken = result.NextPageToken;
             }
             while (!string.IsNullOrEmpty(pageToken));
 
-            return count;
+            return ids;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to count photos in folder {FolderUrl}", folderUrl);
+            _logger.LogError(ex, "Failed to list photo IDs in folder {FolderUrl}", folderUrl);
             throw;
         }
     }

@@ -244,19 +244,24 @@ public class PhotoController : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("proxy/{photoId}")]
+    /// <summary>
+    /// Serves a photo for a given gallery. The gallery is part of the route
+    /// because a photo ID on its own used to be enough to fetch any photo from
+    /// any gallery.
+    /// </summary>
+    [HttpGet("proxy/{guid}/{photoId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds)]
-    public async Task<ActionResult> ProxyPhoto(string photoId, [FromQuery] string? size = null)
+    public async Task<ActionResult> ProxyPhoto(string guid, string photoId, [FromQuery] string? size = null)
     {
         try
         {
-            if (!InputValidator.IsValidGuid(photoId))
+            if (!InputValidator.IsValidGuid(guid) || !InputValidator.IsValidGuid(photoId))
             {
                 _logger.LogWarning(
-                    "Proxy request with invalid photoId from {IP}: {PhotoId}",
-                    HttpContext.Connection.RemoteIpAddress, photoId);
+                    "Proxy request with invalid identifiers from {IP}: {Guid}/{PhotoId}",
+                    HttpContext.Connection.RemoteIpAddress, guid, photoId);
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
             }
 
@@ -267,7 +272,7 @@ public class PhotoController : ControllerBase
                 : null;
 
             var (success, photo, errorMessage) =
-                await _galleryService.GetPhotoStreamAsync(photoId, thumbnailSize);
+                await _galleryService.GetPhotoStreamAsync(guid, photoId, thumbnailSize);
 
             if (!success || photo == null)
                 return NotFound(new { message = errorMessage });
@@ -288,14 +293,14 @@ public class PhotoController : ControllerBase
         }
     }
 
-    [HttpGet("proxy/{photoId}/download")]
+    [HttpGet("proxy/{guid}/{photoId}/download")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> ProxyPhotoDownload(string photoId)
+    public async Task<ActionResult> ProxyPhotoDownload(string guid, string photoId)
     {
         try
         {
-            if (!InputValidator.IsValidGuid(photoId))
+            if (!InputValidator.IsValidGuid(guid) || !InputValidator.IsValidGuid(photoId))
                 return BadRequest(new { message = ApplicationConstants.ErrorMessages.InvalidIdentifier });
 
             // Forward the browser's Range header so its download manager can
@@ -304,7 +309,7 @@ public class PhotoController : ControllerBase
             var rangeHeader = Request.Headers.Range.ToString();
 
             var (success, photo, errorMessage) =
-                await _galleryService.GetPhotoStreamAsync(photoId, rangeHeader: rangeHeader);
+                await _galleryService.GetPhotoStreamAsync(guid, photoId, rangeHeader: rangeHeader);
 
             if (!success || photo == null)
                 return NotFound(new { message = errorMessage });

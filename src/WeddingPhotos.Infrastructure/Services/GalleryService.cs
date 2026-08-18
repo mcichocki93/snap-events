@@ -491,13 +491,51 @@ public class GalleryService : IGalleryService
         }
     }
 
+    /// <summary>
+    /// Whether this photo actually sits in this gallery's folder.
+    ///
+    /// The ID list is cached, but a miss is always rechecked against Drive
+    /// before it counts as a refusal - a photo uploaded seconds ago is
+    /// legitimately absent from a list fetched minutes ago, and a guest must
+    /// never be shown a broken tile for a photo they just sent.
+    /// </summary>
+    private async Task<bool> IsPhotoInGalleryAsync(Client client, string guid, string photoId)
+    {
+        var cacheKey = $"photoIds:{guid}";
+        var ids = await _cacheService.GetAsync<HashSet<string>>(cacheKey);
+
+        if (ids != null && ids.Contains(photoId)) return true;
+
+        ids = await _storageService.GetPhotoIdsAsync(client.GoogleStorageUrl);
+        await _cacheService.SetAsync(cacheKey, ids, TimeSpan.FromMinutes(15));
+
+        return ids.Contains(photoId);
+    }
+
     public async Task<(bool Success, PhotoStreamResult? Photo, string? ErrorMessage)> GetPhotoStreamAsync(
+        string guid,
         string photoId,
         int? thumbnailSize = null,
         string? rangeHeader = null)
     {
         try
         {
+            var client = await _clientRepository.GetByGuidAsync(guid);
+
+            if (client == null || !client.IsActive)
+            {
+                _logger.LogWarning("Photo request for missing or inactive gallery: {Guid}", guid);
+                return (false, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
+            }
+
+            if (!await IsPhotoInGalleryAsync(client, guid, photoId))
+            {
+                _logger.LogWarning(
+                    "Photo {PhotoId} requested through gallery {Guid}, which does not hold it",
+                    photoId, guid);
+                return (false, null, ApplicationConstants.ErrorMessages.PhotoNotFound);
+            }
+
             var photo = await _storageService.GetPhotoStreamAsync(photoId, thumbnailSize, rangeHeader);
             return (true, photo, null);
         }

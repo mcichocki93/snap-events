@@ -41,7 +41,16 @@ public interface IGalleryService
     /// </summary>
     Task CancelUploadSessionAsync(string guid);
 
+    /// <summary>
+    /// Serves a photo, but only to the gallery that actually holds it.
+    /// </summary>
+    /// <param name="guid">
+    /// The gallery being viewed. A photo ID alone used to be enough to fetch
+    /// any photo from any gallery, and those IDs travel in every page of every
+    /// gallery handed out by QR code.
+    /// </param>
     Task<(bool Success, PhotoStreamResult? Photo, string? ErrorMessage)> GetPhotoStreamAsync(
+        string guid,
         string photoId,
         int? thumbnailSize = null,
         string? rangeHeader = null);

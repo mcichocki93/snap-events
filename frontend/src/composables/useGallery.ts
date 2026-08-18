@@ -40,8 +40,8 @@ export function useGallery(guid: string): UseGalleryReturn {
    */
   const mapPhotoWithProxyUrls = (photo: PhotoInfo): PhotoInfo => ({
     ...photo,
-    thumbnailUrl: api.getProxyThumbnailUrl(photo.id),
-    fullUrl: api.getProxyFullUrl(photo.id)
+    thumbnailUrl: api.getProxyThumbnailUrl(guid, photo.id),
+    fullUrl: api.getProxyFullUrl(guid, photo.id)
   })
 
   /**
@@ -112,7 +112,7 @@ export function useGallery(guid: string): UseGalleryReturn {
    */
   const downloadPhoto = async (photo: PhotoInfo): Promise<ComposableResult> => {
     try {
-      const proxyUrl = api.getProxyDownloadUrl(photo.id)
+      const proxyUrl = api.getProxyDownloadUrl(guid, photo.id)
 
       // Create temporary link and trigger download.
       // Deliberately no target="_blank": the download attribute already hands

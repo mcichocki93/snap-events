@@ -11,6 +11,12 @@ public interface IGoogleStorageService
     /// Total number of photos in the folder, across all pages.
     /// </summary>
     Task<int> GetPhotoCountAsync(string folderUrl);
+
+    /// <summary>
+    /// Every photo ID in the folder, for checking that a requested photo really
+    /// belongs to the gallery asking for it.
+    /// </summary>
+    Task<HashSet<string>> GetPhotoIdsAsync(string folderUrl);
     /// <param name="thumbnailSize">
     /// When set, serves Drive's thumbnail rendered at roughly this many pixels
     /// on its longest edge instead of the original file. Falls back to the
