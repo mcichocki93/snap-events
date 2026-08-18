@@ -11,8 +11,37 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/snapevents-frontend
 
 jobs:
+  # Runs before anything is built or shipped, so a red test stops the deploy
+  # instead of being noticed afterwards. Also the only place the suite runs at
+  # all on a Windows machine with Smart App Control enabled, which blocks
+  # freshly compiled unsigned assemblies from loading.
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore WeddingPhotos.sln
+
+      - name: Build
+        run: dotnet build WeddingPhotos.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/WeddingPhotos.Tests.Unit --configuration Release --no-build --verbosity normal
+
   build-and-push:
     name: Build & push Docker images
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
