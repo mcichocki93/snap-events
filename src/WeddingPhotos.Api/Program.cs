@@ -152,22 +152,61 @@ try
         options.EnableEndpointRateLimiting = true;
         options.StackBlockedRequests = false;
         options.HttpStatusCode = 429;
-        options.RealIpHeader = "X-Real-IP";
+
+        // Cloudflare's header, not X-Real-IP. Requests arrive through
+        // Cloudflare, then Apache, then the frontend's nginx - and that nginx
+        // sets X-Real-IP to its own upstream, which is Apache on 127.0.0.1. So
+        // every visitor on earth shared one bucket and the limits below applied
+        // to the whole application at once rather than per person. That is what
+        // rejected guests mid-upload at a real wedding with 429s.
+        // CF-Connecting-IP carries the visitor's address and nothing in the
+        // chain overwrites it.
+        options.RealIpHeader = "CF-Connecting-IP";
         options.ClientIdHeader = "X-ClientId";
 
+        // Health probes come from inside the container and must never consume a
+        // visitor's budget or be throttled by one.
+        options.EndpointWhitelist = new List<string>
+        {
+            "get:/health",
+            "get:/health/live",
+            "get:/health/detailed"
+        };
+
+        // Everything below is sized per public IP address, and at an event that
+        // means the whole venue: every guest is behind one WiFi router, so these
+        // ceilings are shared by the entire wedding, not by one phone.
         options.GeneralRules = new List<RateLimitRule>
         {
-            new RateLimitRule { Endpoint = "*", Period = "1m", Limit = 60 },
-            new RateLimitRule { Endpoint = "*/admin/login", Period = "5m", Limit = 10 }, // Anti-brute-force on admin login
-            new RateLimitRule { Endpoint = "*/photo/upload/*", Period = "1h", Limit = 100 },
-            // Direct-to-Drive uploads cost two lightweight calls per photo (open
-            // the session, confirm it) and carry no photo bytes, so the ceiling
-            // is higher than the buffered path - 100/h would have stopped a
-            // 150-photo Starter gallery halfway.
-            new RateLimitRule { Endpoint = "*/photo/upload-session/*", Period = "1h", Limit = 400 },
-            new RateLimitRule { Endpoint = "*/photo/gallery/*", Period = "1m", Limit = 30 },
-            new RateLimitRule { Endpoint = "*/photo/proxy/*", Period = "1m", Limit = 100 },
-            new RateLimitRule { Endpoint = "*/contact", Period = "1h", Limit = 5 } // Contact form: 5 per hour (anti-spam)
+            // Catch-all safety net, deliberately loose so it never becomes the
+            // binding constraint on a path that has its own considered rule.
+            new RateLimitRule { Endpoint = "*", Period = "1m", Limit = 300 },
+
+            // Anti-brute-force. Strict on purpose, and only now meaningful:
+            // while every request looked like one client, an attacker's failed
+            // attempts locked the real admin out of their own panel.
+            new RateLimitRule { Endpoint = "*/admin/login", Period = "5m", Limit = 10 },
+
+            // Anti-spam on the contact form. Also only now meaningful - as a
+            // shared ceiling it silently dropped genuine enquiries once five
+            // arrived in an hour from anyone at all.
+            new RateLimitRule { Endpoint = "*/contact", Period = "1h", Limit = 5 },
+
+            // The heaviest path: a gallery page pulls one thumbnail per tile.
+            // Fifty guests browsing the morning after is thousands of requests,
+            // softened by the hour-long cache header on each photo.
+            new RateLimitRule { Endpoint = "*/photo/proxy/*", Period = "1m", Limit = 600 },
+
+            new RateLimitRule { Endpoint = "*/photo/gallery/*", Period = "1m", Limit = 120 },
+
+            // Two lightweight calls per photo, carrying no image data: opening
+            // the Drive session and confirming it. Allows roughly a thousand
+            // photos an hour from one venue.
+            new RateLimitRule { Endpoint = "*/photo/upload-session/*", Period = "1h", Limit = 2000 },
+
+            // The buffered fallback, one call per photo. Sized to match, since a
+            // network that blocks Google's upload host puts every guest here.
+            new RateLimitRule { Endpoint = "*/photo/upload/*", Period = "1h", Limit = 1000 }
         };
     });
 
