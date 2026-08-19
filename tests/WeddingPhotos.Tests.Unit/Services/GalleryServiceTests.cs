@@ -343,6 +343,118 @@ public class GalleryServiceTests
         _mockStorageService.Verify(x => x.UploadPhotoAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
+    [Fact]
+    public async Task GetPhotoStreamAsync_WhenPhotoBelongsToGallery_ServesIt()
+    {
+        // Arrange
+        var guid = "gallery-a";
+        var photoId = "photo-in-a";
+        var folderUrl = "https://drive.google.com/drive/folders/folderA";
+
+        var client = new Client { Guid = guid, IsActive = true, GoogleStorageUrl = folderUrl };
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        _mockCacheService
+            .Setup(x => x.GetAsync<HashSet<string>>($"photoIds:{guid}"))
+            .ReturnsAsync(new HashSet<string> { photoId });
+
+        _mockStorageService
+            .Setup(x => x.GetPhotoStreamAsync(photoId, null, null))
+            .ReturnsAsync(new PhotoStreamResult
+            {
+                Stream = new MemoryStream([1, 2, 3]),
+                MimeType = "image/jpeg",
+                FileName = "photo.jpg"
+            });
+
+        // Act
+        var (success, photo, _) = await _galleryService.GetPhotoStreamAsync(guid, photoId);
+
+        // Assert
+        success.Should().BeTrue();
+        photo.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Photo IDs are not secret - they sit in the JSON of every gallery page -
+    /// so holding one must not open a photo from somebody else's event.
+    /// </summary>
+    [Fact]
+    public async Task GetPhotoStreamAsync_WhenPhotoBelongsToAnotherGallery_Refuses()
+    {
+        // Arrange
+        var guid = "gallery-b";
+        var foreignPhotoId = "photo-in-a";
+        var folderUrl = "https://drive.google.com/drive/folders/folderB";
+
+        var client = new Client { Guid = guid, IsActive = true, GoogleStorageUrl = folderUrl };
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        _mockCacheService
+            .Setup(x => x.GetAsync<HashSet<string>>($"photoIds:{guid}"))
+            .ReturnsAsync((HashSet<string>?)null);
+
+        // Gallery B holds its own photos, and the requested one is not among them.
+        _mockStorageService
+            .Setup(x => x.GetPhotoIdsAsync(folderUrl))
+            .ReturnsAsync(new HashSet<string> { "photo-in-b" });
+
+        // Act
+        var (success, photo, errorMessage) = await _galleryService.GetPhotoStreamAsync(guid, foreignPhotoId);
+
+        // Assert
+        success.Should().BeFalse();
+        photo.Should().BeNull();
+        errorMessage.Should().NotBeNull();
+
+        _mockStorageService.Verify(
+            x => x.GetPhotoStreamAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// A photo uploaded seconds ago is legitimately missing from a list fetched
+    /// minutes earlier. Treating that as a refusal would show the guest a broken
+    /// tile for the photo they just sent.
+    /// </summary>
+    [Fact]
+    public async Task GetPhotoStreamAsync_WhenPhotoIsNewerThanCachedList_RechecksDrive()
+    {
+        // Arrange
+        var guid = "gallery-a";
+        var justUploaded = "brand-new-photo";
+        var folderUrl = "https://drive.google.com/drive/folders/folderA";
+
+        var client = new Client { Guid = guid, IsActive = true, GoogleStorageUrl = folderUrl };
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Stale cache: predates the upload.
+        _mockCacheService
+            .Setup(x => x.GetAsync<HashSet<string>>($"photoIds:{guid}"))
+            .ReturnsAsync(new HashSet<string> { "older-photo" });
+
+        // Drive knows better.
+        _mockStorageService
+            .Setup(x => x.GetPhotoIdsAsync(folderUrl))
+            .ReturnsAsync(new HashSet<string> { "older-photo", justUploaded });
+
+        _mockStorageService
+            .Setup(x => x.GetPhotoStreamAsync(justUploaded, It.IsAny<int?>(), It.IsAny<string>()))
+            .ReturnsAsync(new PhotoStreamResult
+            {
+                Stream = new MemoryStream([1, 2, 3]),
+                MimeType = "image/jpeg",
+                FileName = "new.jpg"
+            });
+
+        // Act
+        var (success, _, _) = await _galleryService.GetPhotoStreamAsync(guid, justUploaded);
+
+        // Assert
+        success.Should().BeTrue();
+        _mockStorageService.Verify(x => x.GetPhotoIdsAsync(folderUrl), Times.Once);
+    }
+
     /// <summary>
     /// The counter drifts upward - abandoned sessions keep their slot, and
     /// photos deleted straight from Drive are never noticed - so a gallery can
