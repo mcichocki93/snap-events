@@ -4,7 +4,7 @@
       <div class="privacy-header" data-aos="fade-up">
         <h1 class="privacy-title">Polityka Prywatności</h1>
         <p class="privacy-subtitle">Snap Events - Ochrona danych osobowych</p>
-        <p class="privacy-date">Ostatnia aktualizacja: 9 stycznia 2026</p>
+        <p class="privacy-date">Ostatnia aktualizacja: 25 września 2026</p>
       </div>
 
       <div class="privacy-content">
@@ -18,7 +18,8 @@
           <h2>2. Administrator danych</h2>
           <p><strong>Administratorem danych osobowych jest:</strong></p>
           <p>
-            Snap Events<br>
+            Snap Events — Marcin Cichocki<br>
+            NIP: 5322087110<br>
             Email: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             Strona: <a href="https://snapevents.pl">www.snapevents.pl</a>
           </p>
@@ -38,8 +39,8 @@
 
           <h3>3.2. Dane od gości dodających zdjęcia</h3>
           <ul>
-            <li><strong>Zdjęcia</strong> - przesłane przez użytkowników</li>
-            <li><strong>Metadane zdjęć</strong> - data wykonania, rozmiar pliku, typ pliku</li>
+            <li><strong>Zdjęcia i filmy</strong> - przesłane przez użytkowników. Film zawiera także nagranie dźwięku, więc może utrwalać głos i wypowiedzi osób obecnych na uroczystości</li>
+            <li><strong>Metadane plików</strong> - data wykonania, rozmiar pliku, typ pliku, długość nagrania</li>
             <li><strong>Dane techniczne</strong> - adres IP, typ przeglądarki, system operacyjny (w celach bezpieczeństwa)</li>
           </ul>
 
@@ -69,7 +70,7 @@
           <p>Twoje dane mogą być udostępniane następującym podmiotom:</p>
 
           <ul>
-            <li><strong>Google Drive</strong> - zdjęcia są przechowywane na Google Drive zarządzanym przez Snap Events (Google jako podmiot przetwarzający)</li>
+            <li><strong>Dysk Google</strong> - materiały przechowywane są na Dysku Google należącym do Snap Events. Dostawcą usługi przechowywania jest Google</li>
             <li><strong>Operator płatności</strong> - przetwarzanie transakcji płatniczych</li>
             <li><strong>Dostawca hostingu</strong> - przechowywanie danych na serwerach</li>
             <li><strong>Dostawca CDN</strong> - szybsze ładowanie zdjęć</li>
@@ -82,9 +83,9 @@
           <h2>6. Okres przechowywania danych</h2>
 
           <ul>
-            <li><strong>Zdjęcia i galerie</strong> - przez okres wybrany w pakiecie (14, 30 lub 90 dni), po tym czasie automatycznie usuwane</li>
-            <li><strong>Dane organizatora</strong> - do końca okresu galerii + 30 dni na ewentualne reklamacje</li>
-            <li><strong>Dane płatności</strong> - 5 lat (wymóg prawny dla dokumentacji księgowej)</li>
+            <li><strong>Zdjęcia i filmy</strong> - przez okres wybrany w pakiecie (14, 30 lub 90 dni). Po tym czasie galeria przestaje działać, a organizator otrzymuje link do folderu na Dysku Google. <strong>Folder usuwamy ręcznie po 7 dniach od przekazania linku</strong> - usunięcie nie jest automatyczne i nie odbywa się z dokładnością do godziny</li>
+            <li><strong>Dane kontaktowe organizatora</strong> - do końca okresu galerii i 30 dni po nim, na wypadek reklamacji</li>
+            <li><strong>Dane na dokumentach księgowych</strong> - 5 lat, licząc od końca roku podatkowego (obowiązek prawny)</li>
             <li><strong>Logi serwera</strong> - maksymalnie 90 dni</li>
             <li><strong>Zgody marketingowe</strong> - do czasu wycofania zgody</li>
           </ul>
@@ -110,16 +111,16 @@
 
         <section class="privacy-section" data-aos="fade-up">
           <h2>8. Bezpieczeństwo danych</h2>
-          <p>Stosujemy odpowiednie środki techniczne i organizacyjne zapewniające bezpieczeństwo danych:</p>
+          <p>Stosujemy następujące środki techniczne i organizacyjne:</p>
 
           <ul>
             <li>Szyfrowanie połączeń SSL/TLS</li>
-            <li>Szyfrowanie danych w bazie danych</li>
-            <li>Regularne kopie zapasowe</li>
+            <li>Ruch przez Cloudflare i ograniczanie liczby żądań (ochrona przed nadużyciami)</li>
             <li>Ograniczony dostęp do danych tylko dla upoważnionych osób</li>
             <li>Monitoring i ochrona przed atakami</li>
             <li>Regularne aktualizacje zabezpieczeń</li>
           </ul>
+          <p><strong>Nie prowadzimy kopii zapasowych zdjęć i filmów.</strong> Materiały istnieją w jednym miejscu — w folderze galerii na Dysku Google. Dlatego prosimy o pobranie ich w ciągu 7 dni od otrzymania linku do folderu.</p>
         </section>
 
         <section class="privacy-section" data-aos="fade-up">
@@ -132,22 +133,34 @@
           <ul>
             <li><strong>Niezbędne cookies</strong> - wymagane do działania serwisu (sesja użytkownika, bezpieczeństwo)</li>
             <li><strong>Funkcjonalne cookies</strong> - zapamiętywanie preferencji użytkownika</li>
-            <li><strong>Analityczne cookies</strong> - statystyki odwiedzin (tylko za zgodą)</li>
+            <li><strong>Analityczne cookies</strong> - Google Analytics, wyłącznie po wyrażeniu przez Ciebie zgody. Bez zgody skrypt Google nie jest w ogóle uruchamiany</li>
           </ul>
 
           <h3>9.3. Zarządzanie cookies</h3>
-          <p>Możesz zarządzać cookies w ustawieniach swojej przeglądarki. Wyłączenie cookies może wpłynąć na funkcjonalność serwisu.</p>
+          <p>Możesz zarządzać cookies w ustawieniach swojej przeglądarki. Zgodę na cookies analityczne możesz w każdej chwili wycofać tutaj — wycofanie jest tak samo łatwe jak wyrażenie zgody:</p>
+          <div class="consent-state">
+            <p class="consent-current">
+              Twoja obecna decyzja:
+              <strong v-if="consentChoice === 'granted'">zgoda udzielona</strong>
+              <strong v-else-if="consentChoice === 'denied'">zgoda odrzucona</strong>
+              <strong v-else>jeszcze nie zdecydowano</strong>
+            </p>
+            <div class="consent-buttons">
+              <button v-if="consentChoice !== 'denied'" type="button" class="consent-btn" @click="declineCookies">Wycofaj zgodę</button>
+              <button v-if="consentChoice !== 'granted'" type="button" class="consent-btn consent-btn-primary" @click="acceptCookies">Wyrażam zgodę</button>
+            </div>
+          </div>
         </section>
 
         <section class="privacy-section" data-aos="fade-up">
           <h2>10. Google Drive API</h2>
-          <p>Snap Events używa Google Drive API do przechowywania przesłanych zdjęć na dysku Google Drive zarządzanym przez Snap Events.</p>
+          <p>Snap Events używa Google Drive API do przechowywania przesłanych zdjęć i filmów na Dysku Google należącym do Snap Events.</p>
 
           <ul>
-            <li>Zdjęcia przechowywane są w dedykowanym folderze galerii na koncie Snap Events</li>
+            <li>Materiały przechowywane są w dedykowanym folderze galerii na koncie Snap Events</li>
             <li>Nie wymagamy od Ciebie ani od gości konta Google</li>
             <li>Dostęp do galerii mają wyłącznie osoby z unikalnym linkiem</li>
-            <li>Po wygaśnięciu galerii możesz otrzymać link do pobrania swoich zdjęć</li>
+            <li>Po wygaśnięciu galerii przekazujemy organizatorowi link do folderu; folder usuwamy 7 dni później</li>
           </ul>
 
           <p>Przetwarzanie danych przez Google podlega <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Polityce Prywatności Google</a>.</p>
@@ -187,7 +200,7 @@
             <strong>Email:</strong> <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             <strong>Temat wiadomości:</strong> "Ochrona danych osobowych"
           </p>
-          <p>Odpowiemy na Twoje zapytanie w ciągu 30 dni.</p>
+          <p>Odpowiemy w ciągu miesiąca. W sprawach skomplikowanych termin ten może zostać wydłużony, o czym poinformujemy (art. 12 ust. 3 RODO).</p>
         </section>
 
         <section class="privacy-section" data-aos="fade-up">
@@ -225,6 +238,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import AOS from 'aos'
+import { useCookieConsent } from '../composables/useCookieConsent'
+
+// Withdrawing consent has to be as easy as giving it, so the control lives in the
+// document that describes it rather than behind a link somewhere else.
+const {
+  choice: consentChoice,
+  accept: acceptCookies,
+  decline: declineCookies
+} = useCookieConsent()
 
 onMounted(() => {
   AOS.init({
@@ -244,6 +266,56 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.consent-state {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: rgba(201, 168, 143, 0.12);
+  border: 1px solid rgba(201, 168, 143, 0.5);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.consent-current {
+  margin: 0;
+  font-size: 15px;
+}
+
+.consent-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.consent-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid #C9A88F;
+  background: transparent;
+  color: #55504A;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.consent-btn:hover {
+  background: rgba(201, 168, 143, 0.2);
+}
+
+.consent-btn:focus-visible {
+  outline: 2px solid #A8862C;
+  outline-offset: 2px;
+}
+
+.consent-btn-primary {
+  background: linear-gradient(135deg, #C9A88F 0%, #B89376 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
 .privacy-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #FAF8F6 0%, #FFFFFF 100%);

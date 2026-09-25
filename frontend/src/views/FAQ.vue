@@ -137,22 +137,22 @@ const faqItems = [
   {
     category: 'pricing',
     question: 'Czy mogę anulować zamówienie?',
-    answer: 'Tak, masz 14 dni na odstąpienie od umowy bez podania przyczyny. Jeśli galeria nie została jeszcze uruchomiona, zwrócimy pełną kwotę. Szczegóły w <a href="/regulamin">Regulaminie</a>.'
+    answer: 'Tak, jako konsument masz 14 dni na odstąpienie od umowy bez podania przyczyny. Jeśli galeria nie została jeszcze uruchomiona, zwracamy pełną kwotę. Jeśli już działała, rozliczamy się za wykorzystany okres. Szczegóły w <a href="/regulamin">Regulaminie</a>.'
   },
   {
     category: 'technical',
     question: 'Czy zdjęcia są bezpieczne?',
-    answer: 'Tak! Wszystkie zdjęcia są przechowywane na zabezpieczonym Google Drive Snap Events. Tylko osoby z linkiem mają dostęp do galerii.'
+    answer: 'Materiały przechowujemy na Dysku Google należącym do Snap Events, a połączenie ze stroną jest szyfrowane. Dostęp do galerii ma każdy, kto zna link lub zeskanuje kod QR — nie ma dodatkowego hasła, więc traktuj link jak zaproszenie i udostępniaj go gościom, a nie publicznie.'
   },
   {
     category: 'technical',
     question: 'Co się dzieje ze zdjęciami po zakończeniu okresu dostępności?',
-    answer: 'Po upływie okresu dostępności galeria online zostaje wyłączona. Skontaktuj się z nami, a przekażemy Ci link do folderu ze wszystkimi zdjęciami, abyś mógł je pobrać i zachować.'
+    answer: 'Galeria online przestaje działać, a my przekazujemy Ci link do folderu na Dysku Google ze wszystkimi materiałami w pełnej jakości.<br><br><strong>Folder usuwamy 7 dni po przekazaniu linku</strong>, więc pobierz pliki w tym czasie. Nie prowadzimy kopii zapasowych, więc po usunięciu folderu nie da się ich odtworzyć. Jeśli potrzebujesz więcej czasu, napisz — przesuniemy termin.'
   },
   {
     category: 'technical',
     question: 'Czy mogę pobrać wszystkie zdjęcia jednocześnie?',
-    answer: 'Tak! Pojedyncze zdjęcia możesz pobrać bezpośrednio z galerii. Na życzenie udostępniamy też link do folderu ze wszystkimi zdjęciami w pełnej jakości.'
+    answer: 'Pojedyncze pliki pobierasz bezpośrednio z galerii. Cały zestaw przekazujemy jako link do folderu na Dysku Google — po zakończeniu galerii albo wcześniej, jeśli poprosisz.'
   },
   {
     category: 'technical',
@@ -166,13 +166,18 @@ const faqItems = [
   },
   {
     category: 'photos',
-    question: 'Czy jest limit rozmiaru zdjęć?',
-    answer: 'Pojedyncze zdjęcie może mieć maksymalnie 20 MB. Akceptujemy najpopularniejsze formaty: JPG, JPEG, PNG, HEIC. Zdjęcia są automatycznie optymalizowane.'
+    question: 'Jakie są limity plików?',
+    answer: 'Pojedyncze zdjęcie to standardowo maksymalnie 20 MB — na życzenie możemy podnieść ten limit do 100 MB dla Twojej galerii. Formaty: JPG, JPEG, PNG, HEIC, HEIF, WEBP i GIF.<br><br>Na jedno wysłanie przypada do <strong>10 zdjęć</strong>. Po wysłaniu partii można od razu dobrać kolejną — to tylko porcjowanie, nie limit całej galerii.'
+  },
+  {
+    category: 'photos',
+    question: 'Czy goście mogą wysyłać filmy?',
+    answer: 'Tak, w pakiecie Premium. Jeden film może mieć maksymalnie <strong>60 sekund</strong> i wysyła się go osobno — nie razem ze zdjęciami. Filmy trafiają do tej samej galerii co zdjęcia i można je w niej odtworzyć.<br><br>Jeśli czyjaś przeglądarka nie odtworzy konkretnego nagrania (zdarza się przy filmach z nowszych telefonów), film zawsze można pobrać.'
   },
   {
     category: 'photos',
     question: 'Czy mogę usunąć niechciane zdjęcia?',
-    answer: 'Tak! Jeśli w galerii pojawi się zdjęcie, które nie powinno się tam znaleźć, skontaktuj się z nami na kontakt@snapevents.com.pl — usuniemy je dla Ciebie.'
+    answer: 'Tak. Jeśli w galerii pojawi się zdjęcie lub film, które nie powinny się tam znaleźć, napisz na kontakt@snapevents.com.pl — usuniemy je. Zgłoszenia dotyczące treści bezprawnych lub naruszających prywatność rozpatrujemy w pierwszej kolejności.'
   },
   {
     category: 'photos',
@@ -197,7 +202,7 @@ const faqItems = [
   {
     category: 'technical',
     question: 'Co zrobić jeśli zapomniałem linku do galerii?',
-    answer: 'Link do galerii został wysłany na Twój adres email przy zakupie. Sprawdź skrzynkę odbiorczą i folder spam. Jeśli nie możesz znaleźć emaila, skontaktuj się z nami: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a>'
+    answer: 'Napisz do nas na <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a> — wyślemy link i kod QR ponownie. Link jest stały, więc nie trzeba nic zakładać od nowa.'
   },
   {
     category: 'pricing',

@@ -4,13 +4,14 @@
       <div class="terms-header" data-aos="fade-up">
         <h1 class="terms-title">Regulamin</h1>
         <p class="terms-subtitle">Snap Events - Galeria zdjęć na uroczystości</p>
-        <p class="terms-date">Ostatnia aktualizacja: 6 czerwca 2026</p>
+        <p class="terms-date">Ostatnia aktualizacja: 25 września 2026</p>
       </div>
 
       <div class="terms-content">
         <section class="terms-section" data-aos="fade-up">
           <h2>1. Postanowienia ogólne</h2>
           <p>Niniejszy Regulamin określa zasady korzystania z usługi Snap Events, która umożliwia tworzenie i udostępnianie galerii zdjęć z różnych uroczystości.</p>
+          <p><strong>Materiały</strong> w rozumieniu Regulaminu to zdjęcia i filmy przesyłane do galerii przez organizatora i gości.</p>
           <p>Użytkownikiem może być każda osoba fizyczna, osoba prawna lub jednostka organizacyjna nieposiadająca osobowości prawnej, która ukończyła 18 lat lub działa za zgodą opiekuna prawnego.</p>
         </section>
 
@@ -20,8 +21,9 @@
           <ul>
             <li>Tworzenie dedykowanych galerii zdjęć dla uroczystości</li>
             <li>Możliwość dodawania zdjęć przez gości bez konieczności instalowania aplikacji</li>
-            <li>Przechowywanie zdjęć przez określony czas (zależnie od wybranego pakietu)</li>
-            <li>Automatyczne przesyłanie zdjęć do Google Drive</li>
+            <li>Możliwość dodawania krótkich filmów w pakiecie Premium</li>
+            <li>Przechowywanie materiałów przez określony czas (zależnie od wybranego pakietu)</li>
+            <li>Automatyczne przesyłanie materiałów na Dysk Google Snap Events</li>
             <li>Generowanie unikalnych linków dostępu i kodów QR</li>
           </ul>
         </section>
@@ -47,20 +49,30 @@
             <li>Bez limitu zdjęć</li>
             <li>90 dni dostępności galerii</li>
             <li>Pełna personalizacja (kolory, czcionki, teksty)</li>
+            <li>Filmy do 60 sekund (jeden film na jedno wysłanie)</li>
           </ul>
 
-          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Po upływie okresu dostępności dostęp do galerii zostaje wyłączony. Zdjęcia przechowywane są na Google Drive Snap Events. Po wygaśnięciu galerii organizator może skontaktować się z nami w celu uzyskania linku do folderu ze zdjęciami i ich pobrania.</p>
+          <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Podane ceny są cenami brutto.</p>
+          <p>Limity pakietów liczone są w liczbie plików, nie w zajętym miejscu. W jednym wysłaniu gość może przesłać maksymalnie 10 zdjęć albo jeden film.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>4. Prawa autorskie i własność zdjęć</h2>
-          <p>Wszystkie zdjęcia przesłane do galerii pozostają własnością osób, które je dodały. Organizator uroczystości (właściciel galerii) otrzymuje dostęp do wszystkich zdjęć dodanych przez gości.</p>
-          <p>Użytkownik przesyłając zdjęcia oświadcza, że posiada do nich prawa autorskie lub zgodę osób uprawnionych do ich publikacji.</p>
-          <p>Snap Events nie rości sobie praw do przesłanych zdjęć i nie wykorzystuje ich w celach komercyjnych.</p>
+          <h2>4. Co dzieje się z materiałami po zakończeniu galerii</h2>
+          <p>Materiały przechowywane są na Dysku Google należącym do Snap Events, w folderze utworzonym dla danej galerii.</p>
+          <p>Po upływie okresu dostępności galeria online przestaje działać. Przekazujemy wtedy organizatorowi link do folderu z wszystkimi materiałami w pełnej jakości.</p>
+          <p><strong>Folder jest trwale usuwany po 7 dniach od przekazania linku.</strong> Prosimy o pobranie materiałów w tym czasie — po usunięciu folderu ich odtworzenie nie jest możliwe, ponieważ nie prowadzimy kopii zapasowych.</p>
+          <p>Usunięcie folderu nie jest automatyczne — wykonujemy je ręcznie. Jeśli potrzebujesz więcej czasu, napisz do nas przed upływem tych 7 dni.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>5. Ochrona danych osobowych</h2>
+          <h2>5. Prawa autorskie i własność materiałów</h2>
+          <p>Wszystkie materiały przesłane do galerii pozostają własnością osób, które je dodały. Organizator uroczystości (właściciel galerii) otrzymuje dostęp do wszystkich materiałów dodanych przez gości.</p>
+          <p>Użytkownik przesyłając materiały oświadcza, że posiada do nich prawa autorskie oraz zgodę osób widocznych lub słyszalnych w nagraniu na udostępnienie ich w galerii.</p>
+          <p>Snap Events nie rości sobie praw do przesłanych materiałów i nie wykorzystuje ich w celach komercyjnych.</p>
+        </section>
+
+        <section class="terms-section" data-aos="fade-up">
+          <h2>6. Ochrona danych osobowych</h2>
           <p>Przetwarzanie danych osobowych odbywa się zgodnie z RODO. Administratorem danych jest Snap Events.</p>
           <p>Dane zbierane przez serwis:</p>
           <ul>
@@ -68,22 +80,22 @@
             <li>Metadane zdjęć (data, rozmiar)</li>
             <li>Dane techniczne (adres IP, typ przeglądarki) w celach bezpieczeństwa</li>
           </ul>
-          <p>Szczegółowe informacje znajdują się w <router-link to="/privacy">Polityce Prywatności</router-link>.</p>
+          <p>Szczegółowe informacje znajdują się w <router-link to="/prywatnosc">Polityce Prywatności</router-link>.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>6. Obowiązki użytkownika</h2>
+          <h2>7. Obowiązki użytkownika</h2>
           <p>Użytkownik zobowiązuje się do:</p>
           <ul>
             <li>Nieprzesyłania treści niezgodnych z prawem, obraźliwych lub naruszających prawa osób trzecich</li>
-            <li>Nieprzesyłania zdjęć zawierających wirusy lub inne szkodliwe oprogramowanie</li>
+            <li>Nieprzesyłania plików zawierających wirusy lub inne szkodliwe oprogramowanie</li>
             <li>Nieutrudniania działania serwisu</li>
             <li>Nieudostępniania linku do galerii osobom nieupoważnionym (jeśli galeria ma charakter prywatny)</li>
           </ul>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>7. Odpowiedzialność</h2>
+          <h2>8. Odpowiedzialność</h2>
           <p>Snap Events dokłada wszelkich starań, aby usługa działała nieprzerwanie, jednak nie gwarantuje 100% dostępności serwisu.</p>
           <p>Snap Events nie ponosi odpowiedzialności za:</p>
           <ul>
@@ -95,14 +107,14 @@
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>8. Prawo odstąpienia od umowy</h2>
+          <h2>9. Prawo odstąpienia od umowy</h2>
           <p>Zgodnie z prawem konsumenckim, użytkownik ma prawo odstąpić od umowy w ciągu 14 dni od daty zakupu bez podania przyczyny.</p>
           <p>W przypadku, gdy usługa zostanie uruchomiona na wyraźne żądanie użytkownika przed upływem 14 dni, prawo odstąpienia wygasa.</p>
           <p>Zwrot środków następuje w ciągu 14 dni od otrzymania oświadczenia o odstąpieniu.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>9. Reklamacje</h2>
+          <h2>10. Reklamacje</h2>
           <p>Reklamacje dotyczące usług można zgłaszać na adres e-mail: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a></p>
           <p>Reklamacja powinna zawierać:</p>
           <ul>
@@ -111,23 +123,29 @@
             <li>Identyfikator galerii</li>
             <li>Dane kontaktowe</li>
           </ul>
-          <p>Reklamacje rozpatrywane są w ciągu 14 dni roboczych.</p>
+          <p>Reklamacje rozpatrywane są w ciągu 14 dni od ich otrzymania.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>10. Zmiany regulaminu</h2>
+          <h2>11. Zmiany regulaminu</h2>
           <p>Snap Events zastrzega sobie prawo do wprowadzania zmian w Regulaminie. O wszelkich zmianach użytkownicy zostaną poinformowani z 7-dniowym wyprzedzeniem.</p>
           <p>Kontynuowanie korzystania z usługi po wejściu w życie zmian oznacza akceptację nowego regulaminu.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>11. Postanowienia końcowe</h2>
+          <h2>12. Postanowienia końcowe</h2>
           <p>W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego.</p>
-          <p>Wszelkie spory będą rozstrzygane przez sąd właściwy dla siedziby Snap Events.</p>
+          <p>Spory z konsumentami rozstrzygane są przez sąd właściwy według przepisów ogólnych.</p>
         </section>
 
         <section class="terms-section" data-aos="fade-up">
-          <h2>12. Kontakt</h2>
+          <h2>13. Kontakt</h2>
+          <p><strong>Usługodawca:</strong></p>
+          <p>
+            Marcin Cichocki<br>
+            NIP: 5322087110<br>
+            Email: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a>
+          </p>
           <p>W razie pytań dotyczących Regulaminu prosimy o kontakt:</p>
           <p>
             <strong>Email:</strong> <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>

@@ -110,14 +110,9 @@
     }
     </script>
 
-    <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M1RDRFSMNZ"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-M1RDRFSMNZ');
-    </script>
+    <!-- Google Analytics is loaded from src/composables/useCookieConsent.ts, and only
+         after the visitor agrees. It used to load here on every visit, which set
+         analytics cookies before anyone was asked. -->
 
     <!-- Verification (add your codes) -->
     <!-- <meta name="google-site-verification" content="YOUR_GOOGLE_CODE"> -->

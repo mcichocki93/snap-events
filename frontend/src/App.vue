@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <NotificationContainer />
+    <CookieConsent v-if="!isAdminRoute" />
     <header v-if="!isAdminRoute" class="app-header" :class="{ 'scrolled': isScrolled }">
       <div class="header-content">
         <router-link to="/" class="logo-link">
@@ -35,6 +36,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import SnapEventsLogo from './components/SnapEventsLogo.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
+import CookieConsent from './components/CookieConsent.vue'
+import { useCookieConsent } from './composables/useCookieConsent'
 
 const router = useRouter()
 const route = useRoute()
@@ -70,8 +73,14 @@ const scrollToPricing = (e: Event) => {
   }
 }
 
+const { applyStoredChoice } = useCookieConsent()
+
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
+
+  // Starts Google Analytics only for a visitor who already agreed on an earlier
+  // visit. Without a stored yes, nothing analytical runs and the bar asks.
+  applyStoredChoice()
 })
 
 onUnmounted(() => {
