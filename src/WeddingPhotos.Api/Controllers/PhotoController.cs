@@ -252,9 +252,11 @@ public class PhotoController : ControllerBase
     [HttpGet("proxy/{guid}/{photoId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    // VaryByHeader on Range so a cache never answers a full request with a slice
-    // it stored for a player that was seeking, or the other way round.
-    [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds, VaryByHeader = "Range")]
+    // No [ResponseCache] here on purpose. Its filter writes Cache-Control before
+    // the body runs, so it cannot know whether this turned out to be a whole file
+    // or a slice - a live 206 came back advertising "public, max-age=3600". The
+    // header is set in the body instead, where that is known. VaryByHeader was no
+    // help either: Cloudflare honours Vary only for Accept-Encoding.
     public async Task<ActionResult> ProxyPhoto(string guid, string photoId, [FromQuery] string? size = null)
     {
         try
@@ -288,9 +290,11 @@ public class PhotoController : ControllerBase
 
             // Only a whole response is worth caching. A partial one describes the
             // slice that was asked for, and anything caching it by URL alone would
-            // later serve that slice as if it were the entire file.
-            if (!photo.IsPartial)
-                Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
+            // later serve that slice as if it were the entire file - so a seek in
+            // one guest's video could become every guest's whole photo.
+            Response.Headers.CacheControl = photo.IsPartial
+                ? "no-store"
+                : $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}";
 
             // Advertised even on a full response, so a player knows it may ask
             // for a range when the guest drags the progress bar.
