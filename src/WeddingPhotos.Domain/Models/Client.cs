@@ -4,6 +4,14 @@ using WeddingPhotos.Domain.Constants;
 
 namespace WeddingPhotos.Domain.Models
 {
+    /// <summary>
+    /// Tolerate fields the running code does not know about. Without this the
+    /// driver throws on any element with no matching property, which makes a
+    /// rollback dangerous rather than cheap: deploy a version that adds a field,
+    /// let one gallery be saved, roll back, and reading that document fails -
+    /// taking the gallery and the admin list with it.
+    /// </summary>
+    [BsonIgnoreExtraElements]
     public class Client
     {
         [BsonId]
