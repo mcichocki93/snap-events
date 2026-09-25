@@ -3,6 +3,12 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace WeddingPhotos.Domain.Models;
 
+/// <summary>
+/// Tolerate fields the running code does not know about, for the same reason as
+/// <see cref="Client"/>: without this the driver throws on any element with no
+/// matching property, so a rollback after a field is added breaks reads.
+/// </summary>
+[BsonIgnoreExtraElements]
 public class ContactMessage
 {
     [BsonId]
