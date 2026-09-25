@@ -18,6 +18,9 @@ export interface Client {
   uploadedFilesCount: number
   canUploadMore: boolean
   maxFileSize: number
+  allowVideos: boolean
+  maxVideoDurationSeconds: number
+  maxVideoSize: number
   backgroundColor: string
   backgroundColorSecondary: string
   fontColor: string

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using WeddingPhotos.Domain.Constants;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
@@ -594,4 +595,168 @@ public class GalleryServiceTests
         success.Should().BeFalse();
         _mockStorageService.Verify(x => x.GetPhotoCountAsync(It.IsAny<string>()), Times.Never);
     }
+
+    /// <summary>
+    /// A gallery that does not take videos must refuse one before a Drive
+    /// session is ever opened, and without spending a slot from the package.
+    /// </summary>
+    [Fact]
+    public async Task CreateUploadSessionAsync_WithVideoWhenNotAllowed_IsRefused()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: false);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Act
+        var (success, response, _) = await _galleryService.CreateUploadSessionAsync(
+            guid, "wishes.mp4", "video/mp4", 20_000_000, null);
+
+        // Assert
+        success.Should().BeFalse();
+        response.Message.Should().Be(ApplicationConstants.ErrorMessages.VideosNotAllowed);
+
+        _mockClientRepository.Verify(x => x.TryReserveUploadSlotAsync(It.IsAny<string>()), Times.Never);
+        _mockStorageService.Verify(
+            x => x.CreateResumableUploadSessionAsync(
+                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// A video is judged against the video ceiling, not the gallery's photo size
+    /// limit. Photos here are capped at 10MB; a 60-second film is far past that
+    /// and must still go through.
+    /// </summary>
+    [Fact]
+    public async Task CreateUploadSessionAsync_WithAllowedVideo_IgnoresPhotoSizeLimit()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: true);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+        _mockClientRepository.Setup(x => x.TryReserveUploadSlotAsync(guid)).ReturnsAsync(client);
+        _mockStorageService
+            .Setup(x => x.CreateResumableUploadSessionAsync(
+                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .ReturnsAsync("https://upload.example.com/session");
+
+        // Act - 200MB, twenty times the photo limit on this gallery
+        var (success, response, _) = await _galleryService.CreateUploadSessionAsync(
+            guid, "first-dance.mov", "video/quicktime", 209_715_200, null);
+
+        // Assert
+        success.Should().BeTrue();
+        response.UploadUrl.Should().Be("https://upload.example.com/session");
+    }
+
+    /// <summary>
+    /// The size ceiling is the server's stand-in for the sixty-second limit,
+    /// since duration cannot be measured from bytes. It is what stops a browser
+    /// that skipped the length check.
+    /// </summary>
+    [Fact]
+    public async Task CreateUploadSessionAsync_WithVideoOverSizeCeiling_IsRefused()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: true);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Act
+        var (success, response, _) = await _galleryService.CreateUploadSessionAsync(
+            guid, "whole-reception.mp4", "video/mp4",
+            ApplicationConstants.FileUpload.MaxVideoSizeBytes + 1, null);
+
+        // Assert
+        success.Should().BeFalse();
+        response.Message.Should().Contain(
+            ApplicationConstants.FileUpload.MaxVideoDurationSeconds.ToString());
+
+        _mockClientRepository.Verify(x => x.TryReserveUploadSlotAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// A container we do not serve back is refused even when videos are on -
+    /// better than accepting a file the gallery could never play.
+    /// </summary>
+    [Fact]
+    public async Task CreateUploadSessionAsync_WithUnsupportedVideoFormat_IsRefused()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: true);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Act
+        var (success, response, _) = await _galleryService.CreateUploadSessionAsync(
+            guid, "clip.avi", "video/x-msvideo", 5_000_000, null);
+
+        // Assert
+        success.Should().BeFalse();
+        response.Message.Should().Be(ApplicationConstants.ErrorMessages.InvalidFileType);
+    }
+
+    /// <summary>
+    /// Turning videos on must not loosen anything for photos: the gallery's own
+    /// MaxFileSize still applies to them.
+    /// </summary>
+    [Fact]
+    public async Task CreateUploadSessionAsync_WithOversizedPhotoInVideoGallery_IsRefused()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: true);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Act - 50MB photo against this gallery's 10MB limit
+        var (success, _, _) = await _galleryService.CreateUploadSessionAsync(
+            guid, "huge.jpg", "image/jpeg", 52_428_800, null);
+
+        // Assert
+        success.Should().BeFalse();
+        _mockClientRepository.Verify(x => x.TryReserveUploadSlotAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// The buffered path answers to the same rules as the resumable one - both
+    /// go through the same validation, so a video cannot slip in that way.
+    /// </summary>
+    [Fact]
+    public async Task UploadPhotoAsync_WithVideoWhenNotAllowed_IsRefused()
+    {
+        // Arrange
+        var guid = "test-guid";
+        var client = VideoTestClient(guid, allowVideos: false);
+
+        _mockClientRepository.Setup(x => x.GetByGuidAsync(guid)).ReturnsAsync(client);
+
+        // Act
+        var (success, response, _) = await _galleryService.UploadPhotoAsync(
+            guid, new MemoryStream(new byte[] { 1, 2, 3 }), "wishes.mp4", "video/mp4", 20_000_000);
+
+        // Assert
+        success.Should().BeFalse();
+        response.Message.Should().Be(ApplicationConstants.ErrorMessages.VideosNotAllowed);
+
+        _mockStorageService.Verify(
+            x => x.UploadPhotoAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    private static Client VideoTestClient(string guid, bool allowVideos) => new()
+    {
+        Guid = guid,
+        IsActive = true,
+        DateTo = DateTime.UtcNow.AddDays(30),
+        MaxFiles = 0,
+        MaxFileSize = 10485760, // 10MB, photos only
+        AllowVideos = allowVideos,
+        GoogleStorageUrl = "https://drive.google.com/drive/folders/folder123"
+    };
 }

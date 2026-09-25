@@ -91,6 +91,14 @@
             <input v-model.number="maxFileSizeMB" type="number" min="1" max="100" required />
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="form.allowVideos" type="checkbox" />
+              Pozwól na filmy <span class="hint">(max 60 sekund, jeden plik na raz)</span>
+            </label>
+          </div>
+        </div>
         <div v-if="isEdit" class="form-group">
           <label class="checkbox-label">
             <input v-model="form.isActive" type="checkbox" />
@@ -211,6 +219,7 @@ const form = ref({
   isActive: true,
   maxFiles: 0,
   maxFileSize: 20971520,
+  allowVideos: false,
   backgroundColor: '#667eea',
   backgroundColorSecondary: '#764ba2',
   fontColor: '#ffffff',
@@ -247,6 +256,12 @@ function applyPackage() {
   } else if (selectedPackage.value === 'premium') {
     form.value.maxFiles = 0
     form.value.dateTo = addDays(90)
+  }
+
+  // Films are a Premium thing, but only by convention - the flag lives on the
+  // client, so it can be turned on for anyone below without touching the code.
+  if (selectedPackage.value !== 'custom') {
+    form.value.allowVideos = selectedPackage.value === 'premium'
   }
 }
 
@@ -295,6 +310,7 @@ async function handleSubmit() {
         isActive: form.value.isActive,
         maxFiles: form.value.maxFiles,
         maxFileSize: form.value.maxFileSize,
+        allowVideos: form.value.allowVideos,
         backgroundColor: form.value.backgroundColor,
         backgroundColorSecondary: form.value.backgroundColorSecondary,
         fontColor: form.value.fontColor,
@@ -315,6 +331,7 @@ async function handleSubmit() {
         dateTo: toExpiryIso(form.value.dateTo),
         maxFiles: form.value.maxFiles,
         maxFileSize: form.value.maxFileSize,
+        allowVideos: form.value.allowVideos,
         backgroundColor: form.value.backgroundColor,
         backgroundColorSecondary: form.value.backgroundColorSecondary,
         fontColor: form.value.fontColor,
@@ -349,6 +366,7 @@ onMounted(async () => {
         isActive: client.isActive,
         maxFiles: client.maxFiles,
         maxFileSize: client.maxFileSize,
+        allowVideos: client.allowVideos ?? false,
         backgroundColor: client.backgroundColor,
         backgroundColorSecondary: client.backgroundColorSecondary,
         fontColor: client.fontColor,

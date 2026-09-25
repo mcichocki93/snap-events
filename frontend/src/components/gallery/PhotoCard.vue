@@ -25,9 +25,25 @@
         </svg>
       </div>
 
+      <!--
+        A video tile stays an image. Drive renders a poster frame for videos just
+        as it does thumbnails for photos, and fifty <video> elements on one page
+        would each open their own connection to fetch metadata. The film itself
+        plays in the lightbox, on a click.
+      -->
+      <div v-if="isVideo" class="video-badge" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M5 3.5v9l7.5-4.5L5 3.5z"/>
+        </svg>
+      </div>
+
       <!-- Hover Overlay -->
       <div class="photo-overlay">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <svg v-if="isVideo" width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="15" stroke="currentColor" stroke-width="2"/>
+          <path d="M20 17l11 7-11 7V17z" fill="currentColor"/>
+        </svg>
+        <svg v-else width="48" height="48" viewBox="0 0 48 48" fill="none">
           <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2"/>
           <path d="M28 28l10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <path d="M20 14v12M14 20h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -44,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { PhotoInfo } from '../../types/types'
 
 interface Props {
@@ -52,6 +68,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const isVideo = computed(() => props.photo.mimeType?.startsWith('video/') ?? false)
 
 interface Emits {
   (e: 'click', photo: PhotoInfo): void
@@ -148,6 +166,21 @@ const formatFileSize = (bytes: number): string => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.video-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
 
 .photo-overlay {

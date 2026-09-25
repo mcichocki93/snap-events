@@ -252,7 +252,9 @@ public class PhotoController : ControllerBase
     [HttpGet("proxy/{guid}/{photoId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds)]
+    // VaryByHeader on Range so a cache never answers a full request with a slice
+    // it stored for a player that was seeking, or the other way round.
+    [ResponseCache(Duration = ApplicationConstants.Cache.PhotoProxyDurationSeconds, VaryByHeader = "Range")]
     public async Task<ActionResult> ProxyPhoto(string guid, string photoId, [FromQuery] string? size = null)
     {
         try
@@ -271,18 +273,39 @@ public class PhotoController : ControllerBase
                 ? GridThumbnailPixels
                 : null;
 
+            // Forwarded here too, not only on the download endpoint, because this
+            // is the endpoint a <video> element plays from. Safari refuses to play
+            // a video at all from a source that does not honour byte ranges, and
+            // seeking needs them everywhere. Thumbnails ignore the header - they
+            // are small and Drive renders them whole.
+            var rangeHeader = thumbnailSize.HasValue ? null : Request.Headers.Range.ToString();
+
             var (success, photo, errorMessage) =
-                await _galleryService.GetPhotoStreamAsync(guid, photoId, thumbnailSize);
+                await _galleryService.GetPhotoStreamAsync(guid, photoId, thumbnailSize, rangeHeader);
 
             if (!success || photo == null)
                 return NotFound(new { message = errorMessage });
 
-            Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
+            // Only a whole response is worth caching. A partial one describes the
+            // slice that was asked for, and anything caching it by URL alone would
+            // later serve that slice as if it were the entire file.
+            if (!photo.IsPartial)
+                Response.Headers.Append("Cache-Control", $"public, max-age={ApplicationConstants.Cache.PhotoProxyDurationSeconds}");
+
+            // Advertised even on a full response, so a player knows it may ask
+            // for a range when the guest drags the progress bar.
+            Response.Headers.AcceptRanges = "bytes";
 
             // The stream is not seekable, so nothing downstream can work the
             // length out on its own - without this the response goes out chunked.
             if (photo.Length.HasValue)
                 Response.ContentLength = photo.Length.Value;
+
+            if (photo.IsPartial)
+            {
+                Response.Headers.ContentRange = photo.ContentRange;
+                Response.StatusCode = StatusCodes.Status206PartialContent;
+            }
 
             return File(photo.Stream, photo.MimeType);
         }

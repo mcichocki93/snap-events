@@ -19,6 +19,9 @@
       <div class="info-item" :style="{ color: themeColors.font }">
         Maksymalny rozmiar pliku: <strong>{{ maxFileSizeMB }} MB</strong>
       </div>
+      <div v-if="allowVideos" class="info-item" :style="{ color: themeColors.font }">
+        Filmy: <strong>do {{ maxVideoSeconds }} sekund</strong>, jeden na raz
+      </div>
       <div class="info-note" :style="{ color: themeColors.font }">
         {{ remainingInGallery === null
           ? 'Możesz wysyłać kolejne partie bez ograniczeń'
@@ -40,6 +43,10 @@ const props = defineProps<{
   /** Photos left in the gallery's package; null when it has no limit. */
   remainingInGallery: number | null
   maxFileSize: number
+  /** Whether this gallery takes videos at all. */
+  allowVideos?: boolean
+  /** The length limit guests are told about, enforced in the browser. */
+  maxVideoSeconds?: number
   selectedCount: number
   themeColors: ThemeColors
 }>()

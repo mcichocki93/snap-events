@@ -4,9 +4,20 @@ public static class ApplicationConstants
 {
     public static class FileUpload
     {
+        // Ceiling for photos, and the hard limit on the buffered upload endpoint,
+        // where nginx cuts the request off at 100MB anyway.
         public const long MaxFileSizeBytes = 104857600; // 100MB
         public const long DefaultMaxFileSizeBytes = 20971520; // 20MB
         public const int MaxFileNameLength = 255;
+
+        // Video is capped by duration, not size: 60 seconds is a guest sending
+        // wishes, not somebody filming the whole first dance. Only the browser
+        // can measure duration, so the server's backstop is a size ceiling wide
+        // enough for a minute of 4K from a phone (~400MB) and no wider. A video
+        // never travels the buffered path - the resumable one goes straight to
+        // Drive, so neither nginx's 100MB nor Kestrel's limit applies.
+        public const int MaxVideoDurationSeconds = 60;
+        public const long MaxVideoSizeBytes = 524288000; // 500MB
     }
 
     public static class Pagination
@@ -76,6 +87,15 @@ public static class ApplicationConstants
             "image/heic",
             "image/heif"
         };
+
+        // quicktime covers .mov, which is what an iPhone produces by default.
+        public static readonly HashSet<string> Videos = new()
+        {
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "video/x-m4v"
+        };
     }
 
     public static class AllowedFileExtensions
@@ -89,6 +109,14 @@ public static class ApplicationConstants
             ".webp",
             ".heic",
             ".heif"
+        };
+
+        public static readonly HashSet<string> Videos = new()
+        {
+            ".mp4",
+            ".mov",
+            ".webm",
+            ".m4v"
         };
     }
 
@@ -114,6 +142,8 @@ public static class ApplicationConstants
         public const string NoFileSelected = "Nie wybrano pliku";
         public const string FileTooBig = "Plik jest za duży. Maksymalny rozmiar: {0}MB";
         public const string InvalidFileType = "Nieprawidłowy typ pliku. Dozwolone: JPG, PNG, GIF, WEBP";
+        public const string VideosNotAllowed = "Ta galeria nie przyjmuje filmów";
+        public const string VideoTooBig = "Film jest za duży. Maksymalnie {0} sekund nagrania";
         public const string UploadError = "Nie udało się przesłać pliku";
         public const string GeneralUploadError = "Wystąpił błąd podczas przesyłania pliku";
         public const string LoadingGalleryError = "Wystąpił błąd podczas ładowania galerii";

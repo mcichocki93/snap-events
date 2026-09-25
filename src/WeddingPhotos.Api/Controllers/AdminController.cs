@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using WeddingPhotos.Domain.Constants;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Interfaces;
 using WeddingPhotos.Domain.Models;
@@ -141,6 +142,7 @@ public class AdminController : ControllerBase
         if (request.IsActive.HasValue) client.IsActive = request.IsActive.Value;
         if (request.MaxFiles.HasValue) client.MaxFiles = request.MaxFiles.Value;
         if (request.MaxFileSize.HasValue) client.MaxFileSize = request.MaxFileSize.Value;
+        if (request.AllowVideos.HasValue) client.AllowVideos = request.AllowVideos.Value;
         if (request.BackgroundColor != null) client.BackgroundColor = request.BackgroundColor;
         if (request.BackgroundColorSecondary != null) client.BackgroundColorSecondary = request.BackgroundColorSecondary;
         if (request.FontColor != null) client.FontColor = request.FontColor;
@@ -211,6 +213,9 @@ public class AdminController : ControllerBase
         UploadedFilesCount = client.UploadedFilesCount,
         CanUploadMore = client.MaxFiles == 0 || client.UploadedFilesCount < client.MaxFiles,
         MaxFileSize = client.MaxFileSize,
+        AllowVideos = client.AllowVideos,
+        MaxVideoDurationSeconds = ApplicationConstants.FileUpload.MaxVideoDurationSeconds,
+        MaxVideoSize = ApplicationConstants.FileUpload.MaxVideoSizeBytes,
         BackgroundColor = client.BackgroundColor,
         BackgroundColorSecondary = client.BackgroundColorSecondary,
         FontColor = client.FontColor,

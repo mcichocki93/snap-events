@@ -17,6 +17,16 @@ namespace WeddingPhotos.Infrastructure.Services;
 
 public class GoogleStorageService : IGoogleStorageService
 {
+    /// <summary>
+    /// What counts as gallery content on Drive. Listing and counting must agree:
+    /// the count feeds the quota reconciliation, so a filter that sees fewer
+    /// files than the gallery shows would hand out slots that are already taken.
+    /// Videos included - without them a film lands on Drive and then never
+    /// appears in the gallery, with no error anywhere to explain it.
+    /// </summary>
+    private const string MediaTypeFilter =
+        "(mimeType contains 'image/' or mimeType contains 'video/')";
+
     private readonly GoogleCredential _googleCredential;
     private readonly DriveService _driveService;
     private readonly ILogger<GoogleStorageService> _logger;
@@ -161,7 +171,7 @@ public class GoogleStorageService : IGoogleStorageService
             var clampedPageSize = Math.Min(pageSize, driveApiMaxPageSize);
 
             var request = _driveService.Files.List();
-            request.Q = $"'{folderId}' in parents and mimeType contains 'image/' and trashed=false";
+            request.Q = $"'{folderId}' in parents and {MediaTypeFilter} and trashed=false";
             request.Fields = "nextPageToken,files(id,name,size,createdTime,mimeType,thumbnailLink,webViewLink,webContentLink)";
             request.OrderBy = "createdTime desc";
             request.PageSize = clampedPageSize;
@@ -316,7 +326,7 @@ public class GoogleStorageService : IGoogleStorageService
             do
             {
                 var request = _driveService.Files.List();
-                request.Q = $"'{folderId}' in parents and mimeType contains 'image/' and trashed=false";
+                request.Q = $"'{folderId}' in parents and {MediaTypeFilter} and trashed=false";
                 request.Fields = "nextPageToken,files(id)";
                 request.PageSize = 1000;
                 request.PageToken = pageToken;
@@ -564,7 +574,8 @@ public class GoogleStorageService : IGoogleStorageService
         var allowedExtensions = new[]
         {
             ".jpg", ".jpeg", ".png", ".gif", ".bmp",
-            ".webp", ".heic", ".tiff"
+            ".webp", ".heic", ".tiff",
+            ".mp4", ".mov", ".webm", ".m4v"
         };
         var extension = Path.GetExtension(fileName).ToLower();
         return allowedExtensions.Contains(extension);
@@ -582,6 +593,10 @@ public class GoogleStorageService : IGoogleStorageService
             ".webp" => "image/webp",
             ".heic" => "image/heic",
             ".tiff" or ".tif" => "image/tiff",
+            ".mp4" => "video/mp4",
+            ".mov" => "video/quicktime",
+            ".webm" => "video/webm",
+            ".m4v" => "video/x-m4v",
             _ => "application/octet-stream"
         };
     }

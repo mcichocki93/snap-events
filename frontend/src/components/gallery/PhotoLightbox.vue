@@ -12,16 +12,39 @@
           </button>
         </div>
 
-        <!-- Image -->
+        <!-- Image or video -->
         <div class="lightbox-content">
+          <!--
+            An iPhone records HEVC in a .mov by default, and browser support for
+            that is uneven. Rather than leave a black rectangle, the error handler
+            says so and points at the download button, which always works.
+          -->
+          <video
+            v-if="photo && isVideo"
+            :key="photo.id"
+            :src="photo.fullUrl"
+            :poster="photo.thumbnailUrl"
+            class="lightbox-video"
+            controls
+            playsinline
+            preload="metadata"
+            @loadeddata="onImageLoad"
+            @error="onVideoError"
+          ></video>
+
           <img
-            v-if="photo"
+            v-else-if="photo"
             :src="photo.fullUrl"
             :alt="photo.name"
             class="lightbox-image"
             @load="onImageLoad"
           />
-          <div v-if="loading" class="lightbox-loading">
+
+          <div v-if="videoUnplayable" class="lightbox-unplayable">
+            Ta przeglądarka nie odtworzy tego filmu. Pobierz go, żeby zobaczyć.
+          </div>
+
+          <div v-if="loading && !videoUnplayable" class="lightbox-loading">
             <div class="spinner"></div>
           </div>
         </div>
@@ -65,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import type { PhotoInfo } from '../../types/types'
 
 interface Props {
@@ -90,6 +113,9 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(true)
+const videoUnplayable = ref(false)
+
+const isVideo = computed(() => props.photo?.mimeType?.startsWith('video/') ?? false)
 
 const close = () => {
   emit('update:modelValue', false)
@@ -105,9 +131,15 @@ const onImageLoad = () => {
   loading.value = false
 }
 
+const onVideoError = () => {
+  loading.value = false
+  videoUnplayable.value = true
+}
+
 // Reset loading state when photo changes
 watch(() => props.photo, () => {
   loading.value = true
+  videoUnplayable.value = false
 })
 
 // Handle keyboard navigation
@@ -224,6 +256,28 @@ onUnmounted(() => {
 @keyframes scaleIn {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+.lightbox-video {
+  max-width: 100%;
+  max-height: 100%;
+  /* Deliberately no scaleIn: animating a video element makes the first frame
+     judder on mobile. */
+}
+
+.lightbox-unplayable {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 80%;
+  text-align: center;
+  color: white;
+  font-size: 15px;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 16px 20px;
+  border-radius: 10px;
 }
 
 .lightbox-loading {

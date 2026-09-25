@@ -36,6 +36,13 @@ public class ClientResponse
     public bool CanUploadMore { get; set; }
     public long MaxFileSize { get; set; }
 
+    // Video limits travel with the gallery so the browser never hardcodes them.
+    // The duration limit is the one guests see; the size cap is the server's
+    // backstop, since only the browser can measure a video's length.
+    public bool AllowVideos { get; set; }
+    public int MaxVideoDurationSeconds { get; set; }
+    public long MaxVideoSize { get; set; }
+
     // Theme settings
     public string BackgroundColor { get; set; } = string.Empty;
     public string BackgroundColorSecondary { get; set; } = string.Empty;
@@ -71,6 +78,7 @@ public class CreateClientRequest
     // LIMITS
     public int MaxFiles { get; set; } = 300;
     public long MaxFileSize { get; set; } = 20971520; // 20MB
+    public bool AllowVideos { get; set; } = false;
 
     // THEME (optional)
     public string? BackgroundColor { get; set; }
@@ -114,6 +122,7 @@ public class UpdateClientRequest
     // LIMITS
     public int? MaxFiles { get; set; }
     public long? MaxFileSize { get; set; }
+    public bool? AllowVideos { get; set; }
 
     // THEME
     public string? BackgroundColor { get; set; }

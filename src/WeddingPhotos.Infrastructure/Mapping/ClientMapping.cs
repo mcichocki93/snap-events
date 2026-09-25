@@ -1,3 +1,4 @@
+using WeddingPhotos.Domain.Constants;
 using WeddingPhotos.Domain.DTOs;
 using WeddingPhotos.Domain.Models;
 
@@ -35,6 +36,9 @@ public static class ClientMapping
             // MaxFiles == 0 means no limit
             CanUploadMore = client.MaxFiles == 0 || client.UploadedFilesCount < client.MaxFiles,
             MaxFileSize = client.MaxFileSize,
+            AllowVideos = client.AllowVideos,
+            MaxVideoDurationSeconds = ApplicationConstants.FileUpload.MaxVideoDurationSeconds,
+            MaxVideoSize = ApplicationConstants.FileUpload.MaxVideoSizeBytes,
             BackgroundColor = client.BackgroundColor,
             BackgroundColorSecondary = client.BackgroundColorSecondary,
             FontColor = client.FontColor,
@@ -66,6 +70,7 @@ public static class ClientMapping
             MaxFiles = request.MaxFiles,
             UploadedFilesCount = 0,
             MaxFileSize = request.MaxFileSize,
+            AllowVideos = request.AllowVideos,
             BackgroundColor = request.BackgroundColor ?? "#667eea",
             BackgroundColorSecondary = request.BackgroundColorSecondary ?? "#764ba2",
             FontColor = request.FontColor ?? "#ffffff",

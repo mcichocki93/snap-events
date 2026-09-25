@@ -185,36 +185,19 @@ public class GalleryService : IGalleryService
                 }, ApplicationConstants.ErrorMessages.NoFileSelected);
             }
 
-            // Validate file size
-            if (!InputValidator.IsValidFileSize(fileSize, client.MaxFileSize))
-            {
-                var maxSizeMB = client.MaxFileSize / (1024 * 1024);
-                _logger.LogWarning(
-                    "Upload rejected - file too large: {Size}MB, Max: {MaxSize}MB",
-                    fileSize / (1024 * 1024),
-                    maxSizeMB);
-
-                var errorMessage = string.Format(ApplicationConstants.ErrorMessages.FileTooBig, maxSizeMB);
-                return (false, new UploadPhotoResponse
-                {
-                    Success = false,
-                    Message = errorMessage
-                }, errorMessage);
-            }
-
-            // Validate file type
-            if (!InputValidator.IsValidImageFile(fileName, contentType))
+            // Size and type, with videos judged by their own rules.
+            var mediaError = ValidateMedia(client, fileName, contentType, fileSize);
+            if (mediaError != null)
             {
                 _logger.LogWarning(
-                    "Upload rejected - invalid file type: {FileName}, {ContentType}",
-                    fileName,
-                    contentType);
+                    "Upload rejected for {Guid}: {Reason} ({FileName}, {ContentType}, {Size}MB)",
+                    guid, mediaError, fileName, contentType, fileSize / (1024 * 1024));
 
                 return (false, new UploadPhotoResponse
                 {
                     Success = false,
-                    Message = ApplicationConstants.ErrorMessages.InvalidFileType
-                }, ApplicationConstants.ErrorMessages.InvalidFileType);
+                    Message = mediaError
+                }, mediaError);
             }
 
             // Sanitize filename
@@ -306,6 +289,46 @@ public class GalleryService : IGalleryService
     }
 
     /// <summary>
+    /// Size and type rules for one file. Returns the guest-facing reason it was
+    /// refused, or null when it may go through.
+    ///
+    /// Photos and videos are judged apart. A photo answers to the gallery's own
+    /// MaxFileSize. A video needs the gallery to accept videos at all, and is
+    /// capped by a size that stands in for the sixty-second limit - the server
+    /// sees bytes, not frames, so it cannot measure duration. The browser
+    /// enforces the length a guest is told about; this ceiling is what stops a
+    /// browser that skipped the check, sized to fit a minute of 4K and no more.
+    /// </summary>
+    private static string? ValidateMedia(Client client, string fileName, string mimeType, long fileSize)
+    {
+        if (InputValidator.IsVideoFile(fileName, mimeType))
+        {
+            if (!client.AllowVideos)
+                return ApplicationConstants.ErrorMessages.VideosNotAllowed;
+
+            if (!InputValidator.IsValidVideoFile(fileName, mimeType))
+                return ApplicationConstants.ErrorMessages.InvalidFileType;
+
+            if (!InputValidator.IsValidFileSize(fileSize, ApplicationConstants.FileUpload.MaxVideoSizeBytes))
+                return string.Format(
+                    ApplicationConstants.ErrorMessages.VideoTooBig,
+                    ApplicationConstants.FileUpload.MaxVideoDurationSeconds);
+
+            return null;
+        }
+
+        if (!InputValidator.IsValidFileSize(fileSize, client.MaxFileSize))
+            return string.Format(
+                ApplicationConstants.ErrorMessages.FileTooBig,
+                client.MaxFileSize / (1024 * 1024));
+
+        if (!InputValidator.IsValidImageFile(fileName, mimeType))
+            return ApplicationConstants.ErrorMessages.InvalidFileType;
+
+        return null;
+    }
+
+    /// <summary>
     /// Reserves an upload slot, checking the count against Drive before turning
     /// a guest away.
     ///
@@ -377,19 +400,18 @@ public class GalleryService : IGalleryService
                 return (false, Failure(ApplicationConstants.ErrorMessages.NoFileSelected),
                     ApplicationConstants.ErrorMessages.NoFileSelected);
 
-            if (!InputValidator.IsValidFileSize(fileSize, client.MaxFileSize))
-            {
-                var maxSizeMB = client.MaxFileSize / (1024 * 1024);
-                var tooBig = string.Format(ApplicationConstants.ErrorMessages.FileTooBig, maxSizeMB);
-                return (false, Failure(tooBig), tooBig);
-            }
-
             // The type is judged from the declared filename. That is no weaker
             // than the buffered path: it never inspected the bytes either, and
             // the stored name is generated server-side regardless.
-            if (!InputValidator.IsValidImageFile(fileName, mimeType))
-                return (false, Failure(ApplicationConstants.ErrorMessages.InvalidFileType),
-                    ApplicationConstants.ErrorMessages.InvalidFileType);
+            var mediaError = ValidateMedia(client, fileName, mimeType, fileSize);
+            if (mediaError != null)
+            {
+                _logger.LogWarning(
+                    "Upload session rejected for {Guid}: {Reason} ({FileName}, {MimeType}, {Size}MB)",
+                    guid, mediaError, fileName, mimeType, fileSize / (1024 * 1024));
+
+                return (false, Failure(mediaError), mediaError);
+            }
 
             // Reserved up front so concurrent guests cannot overshoot the quota.
             var reservedClient = await ReserveUploadSlotAsync(client, guid);

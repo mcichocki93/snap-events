@@ -63,6 +63,12 @@ namespace WeddingPhotos.Domain.Models
         [BsonElement("MaxFileSize")]
         public long MaxFileSize { get; set; } = 20971520; // 20MB
 
+        // Videos are opt-in per gallery rather than per package, because packages
+        // are not an entity in the database - just a helper in the admin panel. The
+        // panel turns this on for Premium; nothing stops turning it on elsewhere.
+        [BsonElement("AllowVideos")]
+        public bool AllowVideos { get; set; } = false;
+
         // THEME CUSTOMIZATION
         [BsonElement("BackgroundColor")]
         public string BackgroundColor { get; set; } = "#667eea";

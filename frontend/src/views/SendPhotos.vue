@@ -36,6 +36,8 @@
         :batch-allowance="batchAllowance"
         :remaining-in-gallery="remainingInGallery"
         :max-file-size="client.maxFileSize"
+        :allow-videos="client.allowVideos"
+        :max-video-seconds="client.maxVideoDurationSeconds"
         :selected-count="selectedFiles.length"
         :theme-colors="themeColors"
       />
@@ -52,7 +54,7 @@
         ref="fileInput"
         type="file"
         multiple
-        accept="image/*"
+        :accept="fileAccept"
         @change="handleFileSelect"
         style="display: none"
       />
@@ -140,6 +142,12 @@ const showErrorToast = ref(false)
 const errorMessage = ref('')
 
 // Computed
+// Galleries that do not take videos should not offer them in the picker at all -
+// far better than letting a guest wait through choosing one only to be refused.
+const fileAccept = computed(() =>
+  client.value?.allowVideos ? 'image/*,video/*' : 'image/*'
+)
+
 const pageStyle = computed(() => ({
   background: `linear-gradient(135deg, ${themeColors.value.background} 0%, ${themeColors.value.backgroundSecondary} 100%)`,
   minHeight: '100vh',
@@ -151,17 +159,21 @@ const selectFiles = () => {
   fileInput.value?.click()
 }
 
-const handleFileSelect = (event) => {
+const handleFileSelect = async (event) => {
   const files = event.target.files
+  // Held onto before awaiting: resetting the input afterwards reads
+  // event.target, and the event object is not guaranteed to still carry it.
+  const input = event.target
+
   if (files && files.length > 0) {
-    addFiles(files)
+    await addFiles(files)
   }
   // Reset input
-  event.target.value = ''
+  input.value = ''
 }
 
-const handleFilesDropped = (files) => {
-  addFiles(files)
+const handleFilesDropped = async (files) => {
+  await addFiles(files)
 }
 
 const uploadFiles = async () => {

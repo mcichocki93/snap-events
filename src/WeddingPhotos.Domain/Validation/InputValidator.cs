@@ -45,6 +45,10 @@ public static class InputValidator
     // Allowed image extensions - using constants from ApplicationConstants
     private static readonly HashSet<string> AllowedImageExtensions = ApplicationConstants.AllowedFileExtensions.Images;
 
+    private static readonly HashSet<string> AllowedVideoMimeTypes = ApplicationConstants.AllowedMimeTypes.Videos;
+
+    private static readonly HashSet<string> AllowedVideoExtensions = ApplicationConstants.AllowedFileExtensions.Videos;
+
     // Hex color validation regex - compiled and cached as static field
     private static readonly Regex HexColorRegex = new Regex(
         @"^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
@@ -122,6 +126,41 @@ public static class InputValidator
             return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// Whether this looks like a video rather than a photo. Used to pick which
+    /// set of rules applies - a video has its own ceiling and needs the gallery
+    /// to allow videos at all. Deliberately lenient: it answers "is this being
+    /// offered as a video", and <see cref="IsValidVideoFile"/> decides whether
+    /// it is one we accept.
+    /// </summary>
+    public static bool IsVideoFile(string fileName, string mimeType)
+    {
+        if (!string.IsNullOrWhiteSpace(mimeType) &&
+            mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (string.IsNullOrWhiteSpace(fileName))
+            return false;
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return AllowedVideoExtensions.Contains(extension);
+    }
+
+    /// <summary>
+    /// Validates that a video is one of the formats we serve back.
+    /// </summary>
+    public static bool IsValidVideoFile(string fileName, string mimeType)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(mimeType))
+            return false;
+
+        if (!AllowedVideoMimeTypes.Contains(mimeType.ToLowerInvariant()))
+            return false;
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return AllowedVideoExtensions.Contains(extension);
     }
 
     /// <summary>

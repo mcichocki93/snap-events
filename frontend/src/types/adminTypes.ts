@@ -16,6 +16,7 @@ export interface AdminClient {
   uploadedFilesCount: number
   canUploadMore: boolean
   maxFileSize: number
+  allowVideos: boolean
   backgroundColor: string
   backgroundColorSecondary: string
   fontColor: string
@@ -38,6 +39,7 @@ export interface CreateClientPayload {
   dateTo: string
   maxFiles: number
   maxFileSize: number
+  allowVideos: boolean
   backgroundColor?: string
   backgroundColorSecondary?: string
   fontColor?: string
@@ -58,6 +60,7 @@ export interface UpdateClientPayload {
   isActive?: boolean
   maxFiles?: number
   maxFileSize?: number
+  allowVideos?: boolean
   backgroundColor?: string
   backgroundColorSecondary?: string
   fontColor?: string

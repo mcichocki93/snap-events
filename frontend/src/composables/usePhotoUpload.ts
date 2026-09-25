@@ -42,7 +42,7 @@ export interface UsePhotoUploadReturn {
   canUpload: ComputedRef<boolean>
   batchAllowance: ComputedRef<number>
   remainingInGallery: ComputedRef<number | null>
-  addFiles: (files: FileList | File[]) => void
+  addFiles: (files: FileList | File[]) => Promise<void>
   removeFile: (index: number) => void
   uploadFiles: () => Promise<ComposableResult<{ count: number }>>
   startNewBatch: () => void
@@ -107,7 +107,22 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   // rather than opening a second session and paying the quota twice.
   const sessionUrls = new Map<string, string>()
 
+  const isVideo = (file: File): boolean =>
+    file.type.toLowerCase().startsWith('video/')
+
   const persistQueue = async (): Promise<void> => {
+    // The safety net stores the bytes, because a reloaded page cannot recreate a
+    // File handle from the picker. That works for photos and does not scale to a
+    // minute of 4K: hundreds of megabytes into IndexedDB walks straight into the
+    // per-origin quota, and on iOS the write can stall the upload it is meant to
+    // protect. So a video batch is not persisted at all - an honest gap rather
+    // than a record a resume would choke on. A video is always alone in its
+    // batch, so this never costs a photo its safety net.
+    if (selectedFiles.value.some(f => isVideo(f.file))) {
+      await deleteQueue(guid)
+      return
+    }
+
     await saveQueue({
       guid,
       createdAt: Date.now(),
@@ -243,6 +258,15 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       }
     }
 
+    // The buffered endpoint caps at 100MB - nginx cuts the request off there -
+    // so a film has nowhere to fall back to. Saying so beats uploading for
+    // minutes and collecting a 413 at the end.
+    if (isVideo(fileObj.file)) {
+      throw new Error(
+        'Nie udało się wysłać filmu. Spróbuj ponownie, najlepiej w innej sieci'
+      )
+    }
+
     await uploadViaServer(fileObj)
   }
 
@@ -303,13 +327,84 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     'image/heif'
   ])
 
+  // Must match backend AllowedMimeTypes.Videos. quicktime is .mov, which is what
+  // an iPhone records by default.
+  const ALLOWED_VIDEO_MIME_TYPES = new Set([
+    'video/mp4',
+    'video/quicktime',
+    'video/webm',
+    'video/x-m4v'
+  ])
+
   /**
-   * Validate file before adding to selection
+   * How long a video runs, in seconds, or null when the browser cannot tell.
+   *
+   * This is the only place the duration limit can be enforced: the server sees
+   * bytes, not frames. A browser that cannot read the metadata gets the benefit
+   * of the doubt here and meets the size ceiling on the server instead.
    */
-  const validateFile = (file: File): string[] => {
+  const readVideoDuration = (file: File): Promise<number | null> =>
+    new Promise(resolve => {
+      const url = URL.createObjectURL(file)
+      const probe = document.createElement('video')
+
+      const done = (value: number | null) => {
+        URL.revokeObjectURL(url)
+        probe.removeAttribute('src')
+        resolve(value)
+      }
+
+      // A file the browser cannot decode never fires either event on some
+      // versions, so the wait is bounded rather than left open.
+      const timer = setTimeout(() => done(null), 5000)
+
+      probe.preload = 'metadata'
+      probe.onloadedmetadata = () => {
+        clearTimeout(timer)
+        done(Number.isFinite(probe.duration) ? probe.duration : null)
+      }
+      probe.onerror = () => {
+        clearTimeout(timer)
+        done(null)
+      }
+
+      probe.src = url
+    })
+
+  /**
+   * Validate file before adding to selection. Videos are judged by length, which
+   * is what the guest was promised, and by the server's size ceiling as a
+   * backstop; photos keep the gallery's own size limit.
+   */
+  const validateFile = async (file: File): Promise<string[]> => {
     const errors: string[] = []
 
     if (!clientRef.value) return ['Brak danych klienta']
+
+    if (isVideo(file)) {
+      if (!clientRef.value.allowVideos) {
+        return [`Ta galeria nie przyjmuje filmów (${file.name})`]
+      }
+
+      if (!ALLOWED_VIDEO_MIME_TYPES.has(file.type.toLowerCase())) {
+        return [`Plik ${file.name} nie jest obsługiwanym formatem filmu (dozwolone: MP4, MOV, WEBM)`]
+      }
+
+      const maxSeconds = clientRef.value.maxVideoDurationSeconds
+      const duration = await readVideoDuration(file)
+
+      if (duration !== null && duration > maxSeconds + 0.5) {
+        errors.push(
+          `Film ${file.name} jest za długi (${Math.round(duration)}s, max ${maxSeconds}s)`
+        )
+      }
+
+      if (file.size > clientRef.value.maxVideoSize) {
+        errors.push(`Film ${file.name} jest za duży (max ${maxSeconds} sekund nagrania)`)
+      }
+
+      return errors
+    }
 
     if (file.size > clientRef.value.maxFileSize) {
       const maxSizeMB = Math.round(clientRef.value.maxFileSize / (1024 * 1024))
@@ -326,14 +421,14 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   /**
    * Add files to selection
    */
-  const addFiles = (files: FileList | File[]): void => {
+  const addFiles = async (files: FileList | File[]): Promise<void> => {
     if (!clientRef.value) return
 
     const fileArray = Array.from(files)
     const validFiles: FileUpload[] = []
 
     for (const file of fileArray) {
-      const errors = validateFile(file)
+      const errors = await validateFile(file)
 
       if (errors.length > 0) {
         errors.forEach(error => {
@@ -357,6 +452,23 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
     }
 
     selectedFiles.value.push(...validFiles)
+
+    // A video goes on its own. It is orders of magnitude bigger than a photo and
+    // takes minutes rather than seconds, so mixing one into a batch of ten means
+    // nine photos waiting behind it with no way to tell what is stuck.
+    const firstVideoIndex = selectedFiles.value.findIndex(f => isVideo(f.file))
+
+    if (firstVideoIndex !== -1 && selectedFiles.value.length > 1) {
+      const video = selectedFiles.value[firstVideoIndex]
+      selectedFiles.value = [video]
+
+      notify({
+        type: 'warning',
+        message: 'Film wysyłaj osobno — jeden plik na raz'
+      })
+
+      return
+    }
 
     // Two separate ceilings apply: how many photos this batch may carry, and
     // how many the gallery has left in its package. Trim to the tighter one and
