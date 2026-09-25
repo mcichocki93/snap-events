@@ -451,23 +451,43 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       })
     }
 
-    selectedFiles.value.push(...validFiles)
-
-    // A video goes on its own. It is orders of magnitude bigger than a photo and
-    // takes minutes rather than seconds, so mixing one into a batch of ten means
-    // nine photos waiting behind it with no way to tell what is stuck.
-    const firstVideoIndex = selectedFiles.value.findIndex(f => isVideo(f.file))
-
-    if (firstVideoIndex !== -1 && selectedFiles.value.length > 1) {
-      const video = selectedFiles.value[firstVideoIndex]
-      selectedFiles.value = [video]
-
+    // A batch is either one film or only photos, never both. A film is orders of
+    // magnitude bigger than a photo and takes minutes rather than seconds, so
+    // mixed into a batch of ten it would leave nine photos queued behind it with
+    // nothing explaining the wait. Guarded from both directions: a film already
+    // waiting means nothing else joins it.
+    if (selectedFiles.value.some(f => isVideo(f.file))) {
       notify({
         type: 'warning',
-        message: 'Film wysyłaj osobno — jeden plik na raz'
+        message: 'Najpierw wyślij film — potem dobierz zdjęcia'
       })
-
       return
+    }
+
+    const videos = validFiles.filter(f => isVideo(f.file))
+    const photos = validFiles.filter(f => !isVideo(f.file))
+
+    const nothingElseInPlay =
+      selectedFiles.value.length === 0 && photos.length === 0
+
+    if (videos.length > 0 && nothingElseInPlay) {
+      selectedFiles.value = [videos[0]]
+
+      if (videos.length > 1) {
+        notify({ type: 'warning', message: 'Filmy wysyłaj po jednym' })
+      }
+    } else {
+      // The film is the thing refused, never the photos. Something is already
+      // chosen, or photos arrived in the same pick, and clearing a selection the
+      // guest made on purpose is worse than making them send the film separately.
+      selectedFiles.value.push(...photos)
+
+      if (videos.length > 0) {
+        notify({
+          type: 'warning',
+          message: 'Film wysyłaj osobno — najpierw wyślij wybrane zdjęcia'
+        })
+      }
     }
 
     // Two separate ceilings apply: how many photos this batch may carry, and
