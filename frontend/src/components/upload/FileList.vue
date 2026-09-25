@@ -8,7 +8,7 @@
         class="file-count-badge"
         :class="{ 'error': files.length > maxFiles }"
       >
-        {{ files.length > maxFiles ? `Przekroczono limit ${maxFiles} zdjęć!` : `${files.length} / ${maxFiles}` }}
+        {{ files.length > maxFiles ? `Przekroczono limit ${maxFiles} plików!` : `${files.length} / ${maxFiles}` }}
       </span>
     </div>
 
@@ -24,8 +24,13 @@
       />
     </div>
 
-    <!-- Upload Button -->
+    <!--
+      Gone entirely once everything has been sent, rather than sitting there
+      greyed out over a list of files that already went. The summary panel above
+      is what offers the next batch from here.
+    -->
     <button
+      v-if="hasPending"
       class="upload-btn"
       :class="{ 'disabled': !canUpload }"
       :disabled="!canUpload || uploading"
@@ -41,23 +46,33 @@
           <path d="M10 2v12M4 8l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M2 14v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        Prześlij zdjęcia
+        {{ hasVideo ? 'Prześlij film' : 'Prześlij zdjęcia' }}
       </span>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import FileListItem from './FileListItem.vue'
 import type { FileUpload, ThemeColors } from '../../types/types'
 
-defineProps<{
+const props = defineProps<{
   files: FileUpload[]
   maxFiles: number
   canUpload: boolean
   uploading: boolean
   themeColors: ThemeColors
 }>()
+
+const hasPending = computed(() => props.files.some(f => !f.uploaded))
+
+// A batch holds either one film or only photos, so naming what is actually
+// there beats a generic "files" - and "Prześlij zdjęcia" over a film was simply
+// wrong.
+const hasVideo = computed(() =>
+  props.files.some(f => f.file.type.toLowerCase().startsWith('video/'))
+)
 
 defineEmits(['remove', 'upload'])
 </script>

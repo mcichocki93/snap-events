@@ -110,6 +110,11 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
   const isVideo = (file: File): boolean =>
     file.type.toLowerCase().startsWith('video/')
 
+  /** Files still waiting to go. Everything sent means there is nothing to send. */
+  const pendingCount = computed(
+    () => selectedFiles.value.filter(f => !f.uploaded).length
+  )
+
   const persistQueue = async (): Promise<void> => {
     // The safety net stores the bytes, because a reloaded page cannot recreate a
     // File handle from the picker. That works for photos and does not scale to a
@@ -530,6 +535,13 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
       return { success: false, message: 'Brak danych klienta' }
     }
 
+    // Belt and braces alongside canUpload: whatever calls this, a batch with
+    // nothing left to send must not reach recordBatch below and overwrite a
+    // summary that was reporting success.
+    if (pendingCount.value === 0) {
+      return { success: true, data: { count: 0 } }
+    }
+
     if (clientRef.value.maxFiles > 0 && selectedFiles.value.length > clientRef.value.maxFiles) {
       return { success: false, message: 'Za dużo plików' }
     }
@@ -671,6 +683,14 @@ export function usePhotoUpload(guid: string, clientRef: Ref<Client | null>): Use
 
   const canUpload = computed(() => {
     if (!hasFiles.value || clientRef.value === null || uploading.value) return false
+
+    // A finished batch leaves its files on the list, marked as sent, so the guest
+    // can see what went. Without this the send button stayed live over them, and
+    // pressing it walked the loop skipping every file, recorded a batch of zero,
+    // and replaced "sent 10 photos" with "nothing could be sent" - the exact
+    // conclusion the summary exists to prevent.
+    if (pendingCount.value === 0) return false
+
     return selectedFiles.value.length <= batchAllowance.value
   })
 
