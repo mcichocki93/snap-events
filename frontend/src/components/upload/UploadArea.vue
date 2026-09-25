@@ -17,7 +17,7 @@
     </div>
 
     <h3 class="upload-title">
-      {{ isDragging ? 'Upuść pliki tutaj' : 'Dodaj zdjęcia' }}
+      {{ isDragging ? 'Upuść pliki tutaj' : allowVideos ? 'Dodaj zdjęcia lub film' : 'Dodaj zdjęcia' }}
     </h3>
 
     <p class="upload-description">
@@ -29,13 +29,15 @@
       <span class="format-badge">PNG</span>
       <span class="format-badge">GIF</span>
       <span class="format-badge">WEBP</span>
+      <span v-if="allowVideos" class="format-badge">MP4</span>
+      <span v-if="allowVideos" class="format-badge">MOV</span>
     </div>
 
     <div class="upload-hint">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
-      <span>Maksymalnie 10 zdjęć na raz</span>
+      <span>{{ allowVideos ? 'Do 10 zdjęć, albo jeden film' : 'Maksymalnie 10 zdjęć na raz' }}</span>
     </div>
   </div>
 </template>
@@ -46,6 +48,8 @@ import type { ThemeColors } from '../../types/types'
 
 const props = defineProps<{
   themeColors: ThemeColors
+  /** Whether this gallery takes videos - changes what a guest is invited to send. */
+  allowVideos?: boolean
 }>()
 
 const emit = defineEmits(['click', 'files-dropped'])

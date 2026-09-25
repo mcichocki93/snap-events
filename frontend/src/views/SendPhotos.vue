@@ -45,6 +45,7 @@
       <!-- Upload Area -->
       <UploadArea
         :theme-colors="themeColors"
+        :allow-videos="client?.allowVideos"
         @click="selectFiles"
         @files-dropped="handleFilesDropped"
       />
