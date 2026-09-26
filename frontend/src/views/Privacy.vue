@@ -4,7 +4,7 @@
       <div class="privacy-header" data-aos="fade-up">
         <h1 class="privacy-title">Polityka Prywatności</h1>
         <p class="privacy-subtitle">Snap Events - Ochrona danych osobowych</p>
-        <p class="privacy-date">Ostatnia aktualizacja: 25 września 2026</p>
+        <p class="privacy-date">Ostatnia aktualizacja: 26 września 2026</p>
       </div>
 
       <div class="privacy-content">
@@ -19,6 +19,7 @@
           <p><strong>Administratorem danych osobowych jest:</strong></p>
           <p>
             Snap Events — Marcin Cichocki<br>
+            Zagajnikowa 7, 05-480 Sobiekursk<br>
             NIP: 5322087110<br>
             Email: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a><br>
             Strona: <a href="https://snapevents.pl">www.snapevents.pl</a>
@@ -32,7 +33,7 @@
           <h3>3.1. Dane organizatora galerii</h3>
           <ul>
             <li><strong>Adres email</strong> - do wysłania linku dostępu do galerii i komunikacji</li>
-            <li><strong>Dane płatności</strong> - przetwarzane przez operatora płatności (nie przechowujemy danych karty kredytowej)</li>
+            <li><strong>Dane do rozliczenia</strong> - dane z przelewu bankowego lub przelewu BLIK oraz dane na fakturze. Nie korzystamy z bramki płatniczej i nigdy nie otrzymujemy danych karty płatniczej</li>
             <li><strong>Nazwa wydarzenia</strong> - opcjonalnie, do personalizacji galerii</li>
             <li><strong>Preferencje personalizacji</strong> - kolory, czcionki (tylko pakiet Premium)</li>
           </ul>
@@ -71,7 +72,7 @@
 
           <ul>
             <li><strong>Dysk Google</strong> - materiały przechowywane są na Dysku Google należącym do Snap Events. Dostawcą usługi przechowywania jest Google</li>
-            <li><strong>Operator płatności</strong> - przetwarzanie transakcji płatniczych</li>
+            <li><strong>Bank</strong> - w zakresie wynikającym z realizacji przelewu</li>
             <li><strong>Dostawca hostingu</strong> - przechowywanie danych na serwerach</li>
             <li><strong>Dostawca CDN</strong> - szybsze ładowanie zdjęć</li>
           </ul>

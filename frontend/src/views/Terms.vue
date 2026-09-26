@@ -4,7 +4,7 @@
       <div class="terms-header" data-aos="fade-up">
         <h1 class="terms-title">Regulamin</h1>
         <p class="terms-subtitle">Snap Events - Galeria zdjęć na uroczystości</p>
-        <p class="terms-date">Ostatnia aktualizacja: 25 września 2026</p>
+        <p class="terms-date">Ostatnia aktualizacja: 26 września 2026</p>
       </div>
 
       <div class="terms-content">
@@ -53,6 +53,7 @@
           </ul>
 
           <p>Płatność jest jednorazowa i dokonywana przed aktywacją galerii. Podane ceny są cenami brutto.</p>
+          <p>Płatność przyjmujemy przelewem na rachunek bankowy lub przelewem BLIK na numer telefonu. Dane do przelewu przekazujemy po ustaleniu szczegółów galerii. Nie korzystamy z bramki płatniczej, więc nie podajesz nam danych karty.</p>
           <p>Limity pakietów liczone są w liczbie plików, nie w zajętym miejscu. W jednym wysłaniu gość może przesłać maksymalnie 10 zdjęć albo jeden film.</p>
         </section>
 
@@ -143,6 +144,7 @@
           <p><strong>Usługodawca:</strong></p>
           <p>
             Marcin Cichocki<br>
+            Zagajnikowa 7, 05-480 Sobiekursk<br>
             NIP: 5322087110<br>
             Email: <a href="mailto:kontakt@snapevents.com.pl">kontakt@snapevents.com.pl</a>
           </p>

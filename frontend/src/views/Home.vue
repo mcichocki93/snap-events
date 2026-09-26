@@ -259,8 +259,8 @@ const packages = [
       '150 zdjęć',
       '14 dni dostępności',
       'Domyślny motyw',
-      'Email z linkiem + QR code',
-      'Google Drive storage'
+      'Link i kod QR do galerii',
+      'Zdjęcia na Dysku Google'
     ]
   },
   {
@@ -273,8 +273,8 @@ const packages = [
       'Bez limitu zdjęć',
       '30 dni dostępności',
       'Domyślny motyw',
-      'Email z linkiem + QR code',
-      'Google Drive storage'
+      'Link i kod QR do galerii',
+      'Zdjęcia na Dysku Google'
     ]
   },
   {
@@ -287,8 +287,9 @@ const packages = [
       'Bez limitu zdjęć',
       '90 dni dostępności',
       'Kolory, czcionki, tekst na miarę',
-      'Email z linkiem + QR code',
-      'Google Drive storage'
+      'Filmy do 60 sekund',
+      'Link i kod QR do galerii',
+      'Zdjęcia na Dysku Google'
     ]
   }
 ]

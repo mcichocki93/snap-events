@@ -132,7 +132,7 @@ const faqItems = [
   {
     category: 'pricing',
     question: 'Jakie formy płatności akceptujecie?',
-    answer: 'Akceptujemy wszystkie popularne metody płatności: karty kredytowe/debetowe (Visa, Mastercard), BLIK, przelewy bankowe oraz płatności mobilne. Płatności są obsługiwane przez bezpieczny system płatności.'
+    answer: 'Przelew na konto albo przelew BLIK na numer telefonu — dane przekazujemy po ustaleniu szczegółów galerii. Nie mamy bramki płatniczej, więc nie płaci się kartą na stronie i nie zostawiasz u nas żadnych danych karty.'
   },
   {
     category: 'pricing',
