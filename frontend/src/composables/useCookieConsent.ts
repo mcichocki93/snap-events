@@ -105,12 +105,6 @@ export function useCookieConsent() {
     if (wasGranted && analyticsStarted) window.location.reload()
   }
 
-  /** Lets someone change their mind from the privacy policy. */
-  const reopen = (): void => {
-    choice.value = null
-    write(null)
-  }
-
   /** Called once on boot: starts analytics only for a yes given earlier. */
   const applyStoredChoice = (): void => {
     if (choice.value === 'granted') startAnalytics()
@@ -121,7 +115,6 @@ export function useCookieConsent() {
     needsAnswer: computed(() => choice.value === null),
     accept,
     decline,
-    reopen,
     applyStoredChoice
   }
 }
